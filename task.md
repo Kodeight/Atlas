@@ -1,72 +1,472 @@
-ATLAS — FIX HARDCODED ALGERIA WILAYA + COMMUNE DATA
+ATLAS — STRICT PRE-PUSH QUALITY GATE
+FULL PROJECT AUDIT → FIX → VALIDATE → BUILD → LINK CHECK → GIT REVIEW → PUSH
+
+ROLE:
+You are operating as the final senior engineer/release engineer for the
+Atlas production repository.
+
+Your job is NOT simply to make the requested change.
+
+Your job is to ensure that the ENTIRE PROJECT is in a clean, buildable,
+deployable state BEFORE anything is committed or pushed to GitHub.
+
+THIS IS A STRICT RELEASE GATE.
+
+============================================================
+ABSOLUTE RULE #1 — NEVER PUSH A BROKEN PROJECT
+============================================================
+
+DO NOT commit or push anything until ALL validation stages pass.
+
+If ANY validation fails:
+
+STOP.
+
+Investigate the actual root cause.
+
+Fix it.
+
+Run the affected check again.
+
+Then rerun the COMPLETE validation sequence.
+
+NEVER:
+
+- ignore an error
+- dismiss an error as "unrelated"
+- suppress an error
+- disable a test
+- remove a lint rule just to make it pass
+- add `any` just to silence TypeScript
+- add `@ts-ignore` just to silence TypeScript
+- skip a failing test
+- skip the build
+- skip link checking
+- bypass a validation
+- push first and fix later
+
+The repository must be clean BEFORE pushing.
+
+============================================================
+ABSOLUTE RULE #2 — INSPECT BEFORE MODIFYING
+============================================================
+
+FIRST inspect the repository.
+
+Do not blindly modify files.
+
+Determine:
+
+- framework
+- package manager
+- package.json
+- lockfile
+- Vite configuration
+- TypeScript configuration
+- server configuration
+- routing
+- source structure
+- public assets
+- API routes
+- existing tests
+- existing lint configuration
+- existing formatting configuration
+- existing build scripts
+- existing deployment configuration
+- Git status
+- recent changes
+
+Understand the existing architecture before making changes.
+
+============================================================
+ATLAS ARCHITECTURE — DO NOT BREAK IT
+============================================================
+
+The Atlas project already has working systems.
+
+PRESERVE existing functionality.
+
+Do NOT rebuild working systems unnecessarily.
+
+In particular:
+
+DO NOT unnecessarily modify:
+
+- Prisma
+- PostgreSQL
+- existing database architecture
+- Admin Dashboard backend
+- authentication
+- existing CMS functionality
+- existing order system
+- existing product system
+- existing API architecture
+- existing security implementation
+
+The Wilaya/Commune dataset is currently hardcoded in the site code.
+
+It is NOT a Prisma database table.
+
+Do NOT move it into Prisma/PostgreSQL merely to "improve" it.
+
+============================================================
+STAGE 0 — GIT SAFETY
+============================================================
+
+Before changing anything, run:
+
+git status
+git branch --show-current
+git log -5 --oneline
+
+Record the current state.
+
+Inspect:
+
+git diff
+git diff --cached
+
+DO NOT accidentally overwrite unrelated user work.
+
+DO NOT reset the repository.
+
+DO NOT run destructive Git commands such as:
+
+git reset --hard
+git clean -fd
+git checkout -- .
+
+unless explicitly authorized.
+
+Preserve unrelated existing changes.
+
+============================================================
+STAGE 1 — PROJECT STRUCTURE AUDIT
+============================================================
+
+Inspect the complete repository structure.
+
+Pay particular attention to:
+
+src/
+public/
+server.ts
+package.json
+package-lock.json / pnpm-lock.yaml / yarn.lock
+vite.config.*
+tsconfig.*
+vercel.json
+.env.example
+API routes
+data files
+components
+pages
+routes
+
+Identify suspicious files, recently modified files, generated files,
+and duplicated data sources.
+
+============================================================
+STAGE 2 — SOURCE CODE CORRUPTION SCAN
+============================================================
+
+Scan source files for accidental corruption.
+
+Check for:
+
+- NUL bytes / \x00
+- binary data inside source files
+- malformed UTF-8
+- broken line endings
+- unexpected control characters
+- accidental duplicated code
+- truncated files
+- merge conflict markers
+
+Search for:
+
+<<<<<<<
+=======
+>>>>>>>
+
+Any unresolved merge conflict is a HARD FAILURE.
+
+If accidental NUL characters exist in TypeScript, TSX, JavaScript,
+JSON, CSS, HTML, or configuration files:
+
+FIX THEM.
+
+Do not merely suppress the parser error.
+
+============================================================
+STAGE 3 — TYPESCRIPT / JAVASCRIPT SYNTAX AUDIT
+============================================================
+
+Inspect all:
+
+.ts
+.tsx
+.js
+.jsx
+.mjs
+.cjs
+
+files.
+
+Look for:
+
+- malformed conditions
+- unmatched `{}` 
+- unmatched `()`
+- unmatched `[]`
+- malformed JSX
+- missing closing JSX tags
+- malformed imports
+- malformed exports
+- duplicate declarations
+- unreachable malformed code
+- invalid object syntax
+- invalid array syntax
+- accidental text inserted into source files
+
+Run the project's actual TypeScript validation.
+
+Prefer the existing project command.
+
+If no dedicated typecheck exists, use the appropriate TypeScript
+compiler check without modifying the project configuration merely
+to hide errors.
+
+ALL type errors must be resolved.
+
+============================================================
+STAGE 4 — DEPENDENCY / IMPORT AUDIT
+============================================================
+
+Check all imports.
+
+Find:
+
+- imports pointing to nonexistent files
+- incorrect filename casing
+- incorrect relative paths
+- imports of removed modules
+- unused broken dependencies
+- missing packages
+- duplicate dependency versions that actually cause build problems
+
+Pay particular attention to case sensitivity because production
+Linux/Vercel builds are case-sensitive.
+
+Example:
+
+./ProductCard
+
+must actually resolve to the correct file.
+
+Do not "fix" this by disabling checks.
+
+============================================================
+STAGE 5 — ASSET / PUBLIC FILE AUDIT
+============================================================
+
+Scan references to:
+
+- /images/*
+- /assets/*
+- /fonts/*
+- /uploads/*
+- /icons/*
+- .png
+- .jpg
+- .jpeg
+- .webp
+- .svg
+- .gif
+- .woff
+- .woff2
+- .mp4
+- other public assets
+
+Verify referenced local assets actually exist.
+
+Find broken local asset references.
+
+A page must not reference:
+
+/foo/bar.png
+
+when the file does not exist.
+
+Check case sensitivity.
+
+Do NOT silently replace missing assets with random placeholders.
+
+If an asset is intentionally external, verify its URL separately.
+
+============================================================
+STAGE 6 — ROUTE AUDIT
+============================================================
+
+Inspect all application routes.
+
+Verify:
+
+- storefront routes
+- product routes
+- category routes
+- cart
+- checkout
+- order confirmation
+- admin routes
+- API routes
+- server routes
+
+Look for:
+
+- links to nonexistent internal routes
+- malformed dynamic routes
+- missing route parameters
+- incorrect route casing
+- dead navigation links
+- redirects pointing to nonexistent pages
+
+Do not change valid routes merely because they are not discoverable
+through the homepage.
+
+============================================================
+STAGE 7 — FULL INTERNAL LINK CHECK
+============================================================
+
+THIS IS MANDATORY.
+
+Perform an automated link check across the application.
+
+Check every internal link you can statically identify, including:
+
+- `<a href>`
+- React Router links
+- Next/Vite-style navigation where applicable
+- `Link` components
+- navigation configuration
+- footer links
+- header links
+- product links
+- category links
+- checkout links
+- account links
+- admin navigation
+- programmatically constructed internal URLs where detectable
+
+For every internal URL:
+
+VERIFY that the destination actually exists.
+
+Flag:
+
+- 404
+- 400
+- 500
+- malformed URL
+- nonexistent route
+- broken dynamic route
+- incorrect path
+- incorrect casing
+
+Do NOT stop after checking the homepage.
+
+Crawl/check all reachable application routes where practical.
+
+============================================================
+STAGE 8 — EXTERNAL LINK CHECK
+============================================================
+
+Check external URLs referenced by the project where practical.
+
+Verify:
+
+- HTTP/HTTPS URLs
+- official external resources
+- external images
+- external APIs
+- external documentation links
+- social links
+- payment/delivery links if present
+
+Use HEAD first where appropriate, then GET when HEAD is unsupported.
+
+Treat these as failures:
+
+- DNS failure
+- connection failure
+- invalid URL
+- persistent 4xx
+- persistent 5xx
 
 IMPORTANT:
-The Wilaya/Commune list used by the Atlas checkout is currently
-HARDCODED IN THE SITE CODE.
 
-It is NOT stored in Prisma.
-It is NOT stored in PostgreSQL.
-It is NOT a database table.
+Some websites block automated HEAD/GET requests or require browser
+execution.
 
-DO NOT modify Prisma.
-DO NOT modify PostgreSQL.
-DO NOT create database tables.
-DO NOT create a second database.
-DO NOT change the Admin Dashboard backend.
+Do NOT falsely classify a site as broken solely because it blocks
+automated requests.
 
-This task is ONLY about correcting the hardcoded Algeria
-Wilaya + Commune dataset used by the Atlas storefront checkout.
+If an external server blocks automated validation but the URL is
+syntactically valid, report it separately as:
 
-============================================================
-1. FIND THE CURRENT HARDCODED DATA
-============================================================
+"UNVERIFIED — external server blocks automated checking"
 
-Search the entire Atlas site codebase for the current hardcoded:
-
-- Wilaya list
-- Wilaya codes
-- Wilaya names
-- Arabic Wilaya names
-- Commune list
-- Wilaya → Commune mappings
-
-Look for files such as:
-
-- checkout components
-- checkout forms
-- constants
-- data files
-- JSON files
-- TypeScript/JavaScript constants
-- shipping configuration
-- address components
-- Algeria location datasets
-
-Do NOT assume the filename.
-
-Search the actual codebase first.
+Do NOT change a legitimate URL simply because automated checking is
+blocked.
 
 ============================================================
-2. REPLACE THE INCORRECT DATA
+STAGE 9 — LINK CHECK MUST INCLUDE CODE-GENERATED LINKS
 ============================================================
 
-The current dataset is incorrect/outdated.
+Do not only grep for literal URLs.
 
-Replace the old Wilaya numbering with the CURRENT 2026
-Algerian administrative structure.
+Inspect places where URLs are generated from:
 
-Algeria currently has:
+- product slugs
+- category slugs
+- IDs
+- query parameters
+- route parameters
+- CMS data
+- configuration
 
-69 WILAYAS
-1541 COMMUNES
+For example:
 
-The final Wilaya codes must be 01 through 69.
+/product/${slug}
+
+must produce valid routes for actual products.
+
+Check representative real data where possible.
 
 ============================================================
-3. CRITICAL WILAYA CODES 57–69
+STAGE 10 — WILAYA / COMMUNE VALIDATION
 ============================================================
 
-Make absolutely sure these mappings are correct:
+The Atlas checkout contains a hardcoded Algeria Wilaya/Commune dataset.
+
+Validate it as part of the release.
+
+DO NOT move it into Prisma.
+
+DO NOT move it into PostgreSQL.
+
+DO NOT create a database migration for it.
+
+Verify:
+
+69 Wilayas
+1541 Communes
+
+Wilaya codes must be:
+
+01–69
+
+Critical mappings:
 
 57 — El Meghaier — المغير
 58 — El Meniaâ — المنيعة
@@ -82,377 +482,468 @@ Make absolutely sure these mappings are correct:
 68 — Bou Saâda — بوسعادة
 69 — El Abiodh Sidi Cheikh — الأبيض سيدي الشيخ
 
-DO NOT use the old incorrect mappings.
+Verify:
 
-For example:
-
-57 MUST NOT be In Salah.
-58 MUST NOT be In Guezzam.
-61 MUST NOT be Ksar Chellala.
-62 MUST NOT be Aïn Ouessara.
-63 MUST NOT be Messaad.
-64 MUST NOT be Bou Saâda.
-65 MUST NOT be El Abiodh Sidi Cheikh.
-66 MUST NOT be El Eulma.
-67 MUST NOT be Djamaa.
-68 MUST NOT be Maghnia.
-69 MUST NOT be Debila.
+- no duplicate Wilaya codes
+- no missing codes
+- no duplicate communes
+- every commune belongs to a valid Wilaya
+- Commune selection is filtered by Wilaya
+- changing Wilaya clears the previous Commune
+- invalid Wilaya/Commune combinations cannot be selected
 
 ============================================================
-4. VERIFY ALL 69 WILAYAS
+STAGE 11 — PRODUCT DATA AUDIT
 ============================================================
 
-Do not only fix the visible 57–69 section.
+Inspect product data.
 
-Verify the entire hardcoded dataset.
+Verify:
 
-It must contain:
+- every product has a valid identifier
+- every product has valid required fields
+- product images resolve
+- product links resolve
+- category references are valid
+- variation data is valid
+- prices are valid
+- no malformed objects exist
+- no accidental duplicate product entries were introduced
 
-01
-02
-03
-04
-05
-06
-07
-08
-09
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
+Product galleries must never contain unrelated product images.
+
+Do not silently mix product assets.
+
+============================================================
+STAGE 12 — CHECKOUT AUDIT
+============================================================
+
+Verify the checkout functionality.
+
+Check:
+
+- product selection
+- quantity
+- cart
+- Wilaya
+- Commune
+- full name
+- phone
+- confirm phone
+- address
+- notes
+- email if present
+- delivery fee
+- total
+- Cash on Delivery
+- order submission
+- order confirmation
+
+Do not introduce online card payment systems.
+
+Atlas uses Cash on Delivery.
+
+============================================================
+STAGE 13 — BUILD
+============================================================
+
+Run the ACTUAL production build:
+
+npm run build
+
+Do not assume it works.
+
+Wait for the complete result.
+
+The build must finish successfully.
+
+If the project uses:
+
+vite build
+
+followed by:
+
+esbuild server.ts --bundle --platform=node --format=cjs
+--packages=external --sourcemap --outfile=dist/server.cjs
+
+verify BOTH stages.
+
+If build fails:
+
+FIX THE ROOT CAUSE.
+
+Then run the complete build again.
+
+Do not stop at the first apparent fix.
+
+============================================================
+STAGE 14 — TYPECHECK
+============================================================
+
+Run the project's typecheck.
+
+If the project has:
+
+npm run typecheck
+
+use it.
+
+If not, determine the correct existing TypeScript validation.
 
 There must be:
 
-- no duplicate codes
-- no missing codes
-- no commune accidentally listed as a Wilaya
-- no outdated 58-Wilaya dataset
-- no duplicate Wilaya names
+ZERO TypeScript errors.
+
+Warnings may be reported separately, but no actual type/build error
+may remain.
 
 ============================================================
-5. COMMUNES
+STAGE 15 — LINT
 ============================================================
 
-The Commune data is also hardcoded.
-
-Fix the Commune dataset as well.
-
-The current administrative structure contains:
-
-1541 communes.
-
-Do not only fix the Wilaya names.
-
-Every Commune must belong to the correct Wilaya.
-
-The structure should remain something equivalent to:
-
-Wilaya
-  ↓
-Communes belonging to that Wilaya
+Run the existing lint command.
 
 For example:
 
-When the user selects:
+npm run lint
 
-68 — Bou Saâda
+Use the project's actual configured lint system.
 
-the Commune dropdown must only display communes belonging
-to Wilaya 68.
+Do NOT rewrite the lint configuration simply to make the build pass.
 
-============================================================
-6. DYNAMIC COMMUNE DROPDOWN
-============================================================
+Do NOT disable rules globally.
 
-Keep the existing checkout UI.
-
-Do not redesign the form.
-
-The behavior should be:
-
-No Wilaya selected:
-
-Wilaya:
-[ Select Wilaya ]
-
-Commune:
-[ Select Wilaya first ]
-
-After selecting a Wilaya:
-
-Wilaya:
-68 — Bou Saâda (بوسعادة)
-
-Commune:
-[ Select Commune ]
-
-Only communes belonging to Wilaya 68 appear.
-
-When the user changes the Wilaya:
-
-clear the previously selected Commune.
-
-Then load/filter the communes belonging to the newly selected
-Wilaya.
+Fix genuine errors.
 
 ============================================================
-7. DO NOT USE A GLOBAL COMMUNE LIST WITHOUT FILTERING
+STAGE 16 — TESTS
 ============================================================
 
-Do not allow the user to select an arbitrary Commune independently
-of the Wilaya.
+Run all existing automated tests.
 
-The relationship must be enforced in the application code.
+Do not skip tests.
 
-Example:
+Do not modify tests simply to make them pass unless the test itself
+is genuinely incorrect and the reason is understood.
 
-wilaya = 68
-commune = valid commune belonging to 68
+If no test suite exists, do not invent a giant testing framework just
+for this task.
 
-→ valid
-
-wilaya = 68
-commune = commune belonging to Algiers
-
-→ invalid
+Instead perform the available static/build/runtime checks.
 
 ============================================================
-8. KEEP THE DATA HARDcoded
+STAGE 17 — SECURITY / SECRET SCAN
 ============================================================
 
-The Wilaya + Commune dataset should remain a code-level/static
-dataset because this is how the current Atlas checkout is designed.
-
-You may improve its organization if necessary.
-
-For example, you may use:
-
-/data/algeriaLocations.ts
-
-or:
-
-/constants/algeriaLocations.ts
-
-or another appropriate existing project location.
-
-But DO NOT move it into Prisma/PostgreSQL.
-
-DO NOT create API endpoints just for this data unless the
-existing architecture genuinely requires it.
-
-A static local dataset is completely acceptable here.
-
-============================================================
-9. DO NOT TOUCH PRISMA / DATABASE
-============================================================
-
-This task does NOT require:
-
-- Prisma migrations
-- Prisma schema changes
-- PostgreSQL changes
-- database migrations
-- database seed changes
-- new database tables
-- new database relationships
-
-Leave the existing database architecture untouched.
-
-Products, orders, customers, inventory, authentication, etc.
-must continue working exactly as they do now.
-
-============================================================
-10. DO NOT TOUCH THE ADMIN BACKEND
-============================================================
-
-The existing Admin Dashboard is already working.
-
-Do not rebuild it.
-
-Do not migrate the Wilaya data into the Admin Dashboard database.
-
-Do not introduce another backend.
-
-This task concerns the hardcoded location data used by the
-Atlas storefront checkout.
-
-============================================================
-11. SHIPPING FEES
-============================================================
-
-IMPORTANT:
-
-If delivery/shipping fees are also hardcoded by Wilaya code,
-inspect them.
-
-After correcting the Wilaya numbering, make sure shipping fees
-still correspond to the correct Wilaya.
-
-Do not accidentally shift shipping fees because Wilaya codes
-changed.
-
-If the existing shipping configuration uses the same codes,
-update it consistently.
-
-============================================================
-12. ORDER SUBMISSION
-============================================================
-
-Keep the existing order submission system.
-
-Do not rebuild the order backend.
-
-The checkout should continue submitting the selected:
-
-- Wilaya
-- Commune
-- address
-- phone
-- customer information
-
-exactly as it currently does.
-
-Only correct the location data and validation.
-
-If the existing backend validates Wilaya/Commune values, preserve
-that functionality.
-
-If there is no validation because the data is currently just
-hardcoded frontend data, do not create an unnecessary new backend
-system.
-
-============================================================
-13. SEARCH THE ENTIRE CODEBASE
-============================================================
-
-After making the change, search the entire project for the old
-Wilaya dataset.
+Scan the repository for accidentally committed secrets.
 
 Look for:
 
-- old Wilaya arrays
-- old Commune arrays
-- old 58-Wilaya lists
-- old Wilaya numbering
-- duplicate location constants
-- old shipping mappings
+- API keys
+- private keys
+- passwords
+- database credentials
+- tokens
+- service account credentials
+- .env files
+- hardcoded authentication secrets
 
-Do not leave an old conflicting dataset somewhere else.
+Do NOT expose secrets in output.
 
-There should be ONE authoritative hardcoded Algeria location
-dataset used by the checkout.
+If a real secret is found in tracked files:
 
-============================================================
-14. DO NOT CHANGE ATLAS DESIGN
-============================================================
+STOP.
 
-Do not redesign:
+Do not push.
 
-- checkout
-- header
-- product page
-- cart
-- buttons
-- colors
-- typography
-- logo
-- Atlas branding
-
-Only fix the Wilaya/Commune data and its behavior.
+Report the file and type of issue without printing the secret value.
 
 ============================================================
-15. FINAL VALIDATION
+STAGE 18 — ENVIRONMENT VARIABLE AUDIT
 ============================================================
 
-Before finishing, verify:
+Inspect environment variable usage.
 
-✓ 69 Wilayas exist
-✓ Wilaya codes are 01–69
-✓ No duplicate Wilaya codes
-✓ No missing Wilaya codes
-✓ 1541 communes are represented
-✓ Every Commune belongs to the correct Wilaya
-✓ Wilaya selection filters Commune selection
-✓ Changing Wilaya resets Commune
-✓ Invalid Wilaya/Commune combinations cannot be selected
-✓ 57 = El Meghaier
-✓ 58 = El Meniaâ
-✓ 59 = Aflou
-✓ 60 = Barika
-✓ 61 = El Kantara
-✓ 62 = Bir El Ater
-✓ 63 = El Aricha
-✓ 64 = Ksar Chellala
-✓ 65 = Aïn Ouessara
-✓ 66 = Messaad
-✓ 67 = Ksar El Boukhari
-✓ 68 = Bou Saâda
-✓ 69 = El Abiodh Sidi Cheikh
+Find:
 
-Most importantly:
+process.env.*
+import.meta.env.*
 
-DO NOT TOUCH PRISMA.
-DO NOT TOUCH POSTGRESQL.
-DO NOT REBUILD THE ADMIN BACKEND.
-DO NOT CREATE A NEW DATABASE.
+Verify required variables are documented and the build does not
+reference missing variables in a way that causes production failure.
 
-Fix the existing HARDCODED location dataset in the Atlas
-storefront code and make the checkout use the corrected
-69-Wilaya / 1541-Commune structure.
+Do NOT commit actual production secrets.
+
+Use .env.example where appropriate.
+
+============================================================
+STAGE 19 — DEAD / DUPLICATED DATA AUDIT
+============================================================
+
+Search for duplicated datasets.
+
+Especially check:
+
+- Wilaya arrays
+- Commune arrays
+- product datasets
+- shipping mappings
+- category mappings
+- route definitions
+- configuration constants
+
+There must not be two conflicting versions of the same Atlas data.
+
+If an old Wilaya dataset remains and is still referenced:
+
+FIX THE REFERENCE.
+
+Do not leave stale production data in active code.
+
+============================================================
+STAGE 20 — FORMAT / PARSE CHECK
+============================================================
+
+Validate JSON files.
+
+Validate configuration files.
+
+Validate TypeScript source.
+
+Validate package.json.
+
+Validate lockfile consistency.
+
+Find malformed JSON or configuration.
+
+Do not manually "fix" lockfiles unless necessary.
+
+Prefer the project's package manager.
+
+============================================================
+STAGE 21 — VERCEL PRODUCTION COMPATIBILITY
+============================================================
+
+The project is deployed on Vercel.
+
+Make sure the project works in a Linux production environment.
+
+Pay special attention to:
+
+- case-sensitive imports
+- filesystem paths
+- server/client boundaries
+- Node compatibility
+- build-time environment variables
+- static assets
+- server bundle generation
+- unsupported browser-only APIs used server-side
+- unsupported Node-only APIs used client-side
+
+Do not make development-only assumptions.
+
+============================================================
+STAGE 22 — CLEAN BUILD
+============================================================
+
+After all fixes:
+
+remove only legitimate generated build artifacts if the project
+normally generates them.
+
+Then perform a CLEAN production build where practical.
+
+The final production build must succeed from the repository state
+that will actually be pushed.
+
+============================================================
+STAGE 23 — FINAL FULL VALIDATION
+============================================================
+
+Run the complete validation sequence again from the beginning.
+
+At minimum:
+
+1. Git status
+2. source corruption scan
+3. merge conflict scan
+4. dependency/import check
+5. asset check
+6. route check
+7. internal link check
+8. external link check
+9. Wilaya/Commune validation
+10. TypeScript check
+11. lint
+12. tests
+13. secret scan
+14. production build
+15. Git diff review
+
+Do not assume a previous successful partial check is still valid
+after later modifications.
+
+============================================================
+STAGE 24 — REVIEW THE FINAL DIFF
+============================================================
+
+Run:
+
+git status
+git diff
+git diff --stat
+
+Read the final diff carefully.
+
+Verify that every changed file is intentional.
+
+Look for:
+
+- accidental files
+- debug code
+- console logs
+- temporary scripts
+- generated files
+- test artifacts
+- unrelated formatting changes
+- accidental deletions
+- accidental large files
+- secrets
+- duplicated data
+- incomplete TODOs
+- commented-out broken code
+
+Do NOT push unrelated modifications.
+
+============================================================
+STAGE 25 — FINAL ERROR POLICY
+============================================================
+
+The following are HARD BLOCKERS:
+
+❌ TypeScript error
+❌ JavaScript syntax error
+❌ JSX syntax error
+❌ Vite build error
+❌ server build error
+❌ failed existing test
+❌ broken internal link
+❌ broken local asset
+❌ unresolved import
+❌ malformed JSON
+❌ merge conflict
+❌ secret detected
+❌ invalid Wilaya/Commune mapping
+❌ missing required production route
+❌ runtime-breaking error
+❌ corrupted source file
+❌ invalid package/dependency state
+
+ANY ONE OF THESE = DO NOT PUSH.
+
+============================================================
+STAGE 26 — WARNINGS
+============================================================
+
+Warnings must NOT automatically be ignored.
+
+Investigate warnings.
+
+If a warning indicates a real production risk, fix it.
+
+For example:
+
+- missing dependency
+- deprecated API causing future failure
+- failed asset generation
+- security warning
+- invalid configuration
+- dependency install script required for functionality
+
+Do not suppress warnings merely to obtain a clean-looking log.
+
+However, do not make unrelated dependency upgrades just because a
+package reports a funding message or harmless informational warning.
+
+============================================================
+STAGE 27 — ONLY AFTER EVERYTHING PASSES
+============================================================
+
+ONLY when ALL required checks pass:
+
+show a concise release summary containing:
+
+BUILD: PASS
+TYPECHECK: PASS
+LINT: PASS
+TESTS: PASS
+INTERNAL LINKS: PASS
+EXTERNAL LINKS: PASS / UNVERIFIED ITEMS LISTED
+LOCAL ASSETS: PASS
+IMPORTS: PASS
+WILAYAS: PASS
+COMMUNES: PASS
+SECURITY SCAN: PASS
+GIT DIFF: REVIEWED
+
+Then show exactly which files were changed.
+
+ONLY AFTER THAT may you commit and push.
+
+============================================================
+GIT COMMIT
+============================================================
+
+Create a clear commit message describing the actual changes.
+
+Do not include unrelated changes.
+
+Before pushing, run:
+
+git status
+
+one final time.
+
+The working tree must contain only intentional changes.
+
+============================================================
+GIT PUSH
+============================================================
+
+Push ONLY after the complete validation gate passes.
+
+If any blocker remains:
+
+DO NOT PUSH.
+
+Instead report:
+
+BLOCKED — [exact failure]
+
+and continue fixing it.
+
+============================================================
+MOST IMPORTANT RULE
+============================================================
+
+NEVER optimize for "getting the deployment out."
+
+Optimize for:
+
+CORRECT
+VALIDATED
+BUILDABLE
+LINK-CLEAN
+SECURE
+DEPLOYABLE
+PRODUCTION-READY
+
+Do not push until the project passes the complete quality gate.
+
+If something fails, fix it at the root cause and rerun the relevant
+check AND the final complete validation sequence.
+
+NO SHORTCUTS.
+NO "GOOD ENOUGH."
+NO "IT SHOULD WORK."
+NO PUSH WITH KNOWN ERRORS.

@@ -1,4 +1,4 @@
-/// <reference path="./bcryptjs.d.ts" />
+﻿/// <reference path="./bcryptjs.d.ts" />
 import express, { NextFunction, Request, Response } from "express";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
@@ -155,7 +155,7 @@ export interface OrderAdmin {
   date: string;
 }
 
-const ADMIN_EMAIL = "admin@zest.com";
+const ADMIN_EMAIL = "admin@atlas.dz";
 
 const atlasProductSeeds = [
   {
@@ -257,7 +257,7 @@ function unauthorized(res: Response) {
 }
 
 async function ensureAdminUser() {
-  const ADMIN_EMAIL = "admin@zest.com";
+  const ADMIN_EMAIL = "admin@atlas.dz";
   const existing = await prisma.adminUser.findUnique({ where: { email: ADMIN_EMAIL } });
   if (!existing) {
     await prisma.adminUser.create({
