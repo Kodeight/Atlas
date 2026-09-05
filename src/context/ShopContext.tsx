@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Product, CartItem, ProductColor } from '../types';
 import { Language, TRANSLATIONS, detectBrowserLanguage } from '../i18n/translations';
+import { fetchProductsFromCMS, hasFetchedFromCMS, mapAdminProductsToStorefront, getAllAtlasProductsFallback } from '../data/products';
+import { Product } from '../types';
 
 interface OrderNowParams {
   product?: Product;
@@ -49,6 +50,12 @@ interface ShopContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: keyof typeof TRANSLATIONS['en']) => string;
+
+  // Product state - fetched from CMS or static fallback
+  products: Product[];
+  setProducts: (prods: Product[]) => void;
+  isProductsLoading: boolean;
+  error: string | null;
 }
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
@@ -98,7 +105,50 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isFromCart: false,
   });
 
-  // Client path tracking with browser history sync
+  // Product state - fetched from CMS or static fallback
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isProductsLoading, setIsProductsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch products from CMS when component mounts
+  useEffect(() => {
+    async function loadProducts() {
+      setIsProductsLoading(true);
+      setError(null);
+      
+      try {
+        const cmsProducts = await fetchProductsFromCMS();
+        setProducts(cmsProducts);
+        setIsProductsLoading(false);
+      } catch (err) {
+        console.error('Failed to load products from CMS:', err);
+        setError('Failed to load products. Using available data.');
+        // Fall back to static Atlas products
+        setProducts(getAllAtlasProductsFallback());
+        setIsProductsLoading(false);
+      }
+    }
+
+    loadProducts();
+  }, []);
+
+  // Helper to get products - use CMS data if available, otherwise static fallback
+  const getProducts = (): Product[] => {
+    if (products.length > 0) {
+      return products;
+    }
+    return getAllAtlasProductsFallback();
+  };
+
+  const navigate = (path: string) => {
+    if (path !== window.location.pathname) {
+      window.history.pushState({}, '', path);
+      setCurrentPath(path);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Current path tracking
   const [currentPath, setCurrentPath] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       return window.location.pathname || '/';
@@ -121,14 +171,6 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
-
-  const navigate = (path: string) => {
-    if (path !== currentPath) {
-      window.history.pushState({}, '', path);
-      setCurrentPath(path);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
 
   const showToast = (text: string) => {
     setToast({ text, visible: true });
@@ -239,6 +281,10 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         language,
         setLanguage,
         t,
+        products: getProducts(),
+        setProducts,
+        isProductsLoading,
+        error,
       }}
     >
       {children}

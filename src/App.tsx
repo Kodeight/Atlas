@@ -19,7 +19,7 @@ import { SearchModal } from './components/SearchModal';
 import { Toast } from './components/Toast';
 
 const MainRouter: React.FC = () => {
-  const { currentPath } = useShop();
+  const { currentPath, products, isProductsLoading, error } = useShop();
 
   // Scroll to top on path change
   useEffect(() => {

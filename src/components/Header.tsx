@@ -17,7 +17,7 @@ export const Header: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navLinks = [
+const navLinks = [
     { label: t('navHome'), path: '/' },
     { label: t('navShop'), path: '/shop' },
     { label: t('navWomen'), path: '/category/women' },
@@ -39,7 +39,7 @@ export const Header: React.FC = () => {
   return (
     <>
       {/* Top Algerian Delivery Trust Micro-Bar (NO COD MENTION) */}
-      <div className="bg-[#164030] text-[#E7E3DA] text-[11px] sm:text-xs font-sans-ui tracking-wide py-1.5 px-4 text-center border-b border-[#286d53]/30">
+      <div className="bg-[#164030] text-[#E7E3DA] text-[11px] sm:text-xs font-sans-ui tracking-wide py-1.5 px-4 text-center border-b border-[#E7E3DA]/30">
         <div className="max-w-7xl mx-auto flex items-center justify-between sm:justify-center gap-2 sm:gap-6">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-[#A3B899] shrink-0" />
@@ -56,10 +56,10 @@ export const Header: React.FC = () => {
 
       {/* Main Header */}
       <header
-        className={`sticky top-0 z-40 w-full transition-all duration-300 bg-[#1F5742] text-white ${
+        className={`sticky top-0 z-40 w-full transition-all duration-300 bg-[#FCFBF7] text-[#151515] ${
           isScrolled
-            ? 'py-3 sm:py-3.5 shadow-md border-b border-[#286d53]/40'
-            : 'py-4 sm:py-5 border-b border-[#286d53]/20'
+            ? 'py-3 sm:py-3.5 shadow-sm border-b border-[#E7E3DA]/40'
+            : 'py-4 sm:py-5 border-b border-[#E7E3DA]/20'
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
@@ -68,7 +68,7 @@ export const Header: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-1.5 -ml-1.5 text-white/90 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-white/40"
+              className="lg:hidden p-1.5 -ml-1.5 text-[#151515] hover:text-[#1F5742] transition-colors focus:outline-none focus:ring-1 focus:ring-[#E7E3DA]/40"
               aria-label="Open navigation menu"
             >
               <Menu className="w-6 h-6" />
@@ -85,7 +85,7 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Center: Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-7 xl:gap-8 text-[12px] xl:text-[13px] font-sans-ui tracking-[0.14em] font-medium text-white/90">
+          <nav className="hidden lg:flex items-center gap-7 xl:gap-8 text-[12px] xl:text-[13px] font-sans-ui tracking-[0.14em] font-medium text-[#151515]">
             {navLinks.map((link) => {
               const isActive = currentPath === link.path;
               return (
@@ -93,8 +93,8 @@ export const Header: React.FC = () => {
                   key={link.path}
                   type="button"
                   onClick={() => handleNavClick(link.path)}
-                  className={`relative py-1.5 transition-colors duration-150 uppercase hover:text-white ${
-                    isActive ? 'text-white font-semibold' : 'text-white/80'
+                  className={`relative py-1.5 transition-colors duration-150 uppercase hover:text-[#1F5742] ${
+                    isActive ? 'text-[#1F5742] font-semibold' : 'text-[#151515]'
                   } ${link.isSale ? 'text-[#E8A598] hover:text-[#f3beb5]' : ''}`}
                 >
                   {link.label}
@@ -112,14 +112,14 @@ export const Header: React.FC = () => {
           {/* Right: Language Selector, Search & Shopping Bag */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Language Selector Pill */}
-            <div className="flex items-center bg-[#164030] rounded-full p-0.5 border border-[#286d53]/50 text-[11px] font-semibold font-sans-ui">
+            <div className="flex items-center bg-[#FCFBF7] rounded-full p-0.5 border border-[#E7E3DA]/50 text-[11px] font-semibold font-sans-ui">
               <button
                 type="button"
                 onClick={() => setLanguage('fr')}
                 className={`px-2 py-0.5 rounded-full transition-all ${
                   language === 'fr'
-                    ? 'bg-[#F7F3EA] text-[#1F5742] shadow-xs'
-                    : 'text-white/70 hover:text-white'
+                    ? 'bg-[#1F5742] text-[#FCFBF7] shadow-xs'
+                    : 'text-[#151515] hover:text-[#1F5742]'
                 }`}
                 aria-label="Français"
               >
@@ -130,8 +130,8 @@ export const Header: React.FC = () => {
                 onClick={() => setLanguage('en')}
                 className={`px-2 py-0.5 rounded-full transition-all ${
                   language === 'en'
-                    ? 'bg-[#F7F3EA] text-[#1F5742] shadow-xs'
-                    : 'text-white/70 hover:text-white'
+                    ? 'bg-[#1F5742] text-[#FCFBF7] shadow-xs'
+                    : 'text-[#151515] hover:text-[#1F5742]'
                 }`}
                 aria-label="English"
               >
@@ -143,7 +143,7 @@ export const Header: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsSearchOpen(true)}
-              className="p-2 text-white/90 hover:text-white hover:bg-white/10 rounded-full transition-colors focus:outline-none"
+              className="p-2 text-[#151515] hover:text-[#1F5742] hover:bg-[#FCFBF7] rounded-full transition-colors focus:outline-none"
               aria-label="Search catalog"
             >
               <Search className="w-5 h-5" />
@@ -154,12 +154,12 @@ export const Header: React.FC = () => {
               whileTap={{ scale: 0.95 }}
               type="button"
               onClick={() => setIsCartOpen(true)}
-              className="relative p-2 text-white/90 hover:text-white hover:bg-white/10 rounded-full transition-colors focus:outline-none"
+              className="relative p-2 text-[#151515] hover:text-[#1F5742] hover:bg-[#FCFBF7] rounded-full transition-colors focus:outline-none"
               aria-label={`Shopping bag with ${cartCount} items`}
             >
               <ShoppingBag className="w-5 h-5" />
               {cartCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[19px] h-[19px] px-1 bg-[#F7F3EA] text-[#1F5742] text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[19px] h-[19px] px-1 bg-[#FCFBF7] text-[#1F5742] text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">
                   {cartCount}
                 </span>
               )}

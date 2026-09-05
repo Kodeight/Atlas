@@ -1,0 +1,39 @@
+[
+  {
+    "id": "order-001",
+    "customerName": "Mia Alvarez",
+    "phone": "+1 555-912-3456",
+    "address": "246 Cedar Avenue, Springfield",
+    "products": [
+      { "productId": "orange-1", "name": "ZEST Orange", "quantity": 2, "price": 2.99 },
+      { "productId": "berry-1", "name": "ZEST Berry", "quantity": 1, "price": 3.49 }
+    ],
+    "total": 9.47,
+    "status": "pending",
+    "date": "2026-04-10T10:20:00.000Z"
+  },
+  {
+    "id": "order-002",
+    "customerName": "Noah Patel",
+    "phone": "+1 555-987-6543",
+    "address": "512 Maple Street, Fairview",
+    "products": [
+      { "productId": "lime-1", "name": "ZEST Lime", "quantity": 3, "price": 2.99 }
+    ],
+    "total": 8.97,
+    "status": "processing",
+    "date": "2026-04-09T15:45:00.000Z"
+  },
+  {
+    "id": "order-003",
+    "customerName": "Avery Brooks",
+    "phone": "+1 555-804-7210",
+    "address": "78 Walnut Lane, Brookside",
+    "products": [
+      { "productId": "berry-1", "name": "ZEST Berry", "quantity": 4, "price": 3.49 }
+    ],
+    "total": 13.96,
+    "status": "delivered",
+    "date": "2026-04-07T08:30:00.000Z"
+  }
+]

@@ -86,7 +86,7 @@ export const QuickViewModal: React.FC = () => {
           </button>
 
           {/* Gallery on Left */}
-          <div className="md:w-1/2 bg-[#F2EDE2] relative flex flex-col">
+          <div className="md:w-1/2 bg-[#FCFBF7] relative flex flex-col">
             <div className="w-full aspect-[4/5] relative overflow-hidden">
               <img
                 src={product.images[activeImageIndex] || product.images[0]}
@@ -219,7 +219,7 @@ export const QuickViewModal: React.FC = () => {
               {/* Quantity */}
               <div className="flex items-center gap-3 pt-1">
                 <span className="text-xs font-semibold text-[#151515]">{t('quantity')}:</span>
-                <div className="flex items-center border border-[#E7E3DA] rounded bg-white">
+                <div className="flex items-center border border-[#E7E3DA] rounded bg-[#FCFBF7]">
                   <button
                     type="button"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}

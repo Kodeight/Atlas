@@ -175,7 +175,7 @@ export const CartDrawer: React.FC = () => {
 
                         <div className="flex items-center justify-between pt-2">
                           {/* Quantity Selector */}
-                          <div className="flex items-center border border-[#E7E3DA] rounded bg-white">
+                          <div className="flex items-center border border-[#E7E3DA] rounded bg-[#FCFBF7]">
                             <button
                               type="button"
                               onClick={() => updateQuantity(item.id, item.quantity - 1)}
