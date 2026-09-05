@@ -559,38 +559,39 @@ export const PRODUCTS_DATA: Product[] = [
 ];
 
 export function getProductBySlug(slug: string): Product | undefined {
-  return PRODUCTS_DATA.find((p) => p.slug === slug);
+  return getActiveCatalog().find((p) => p.slug === slug);
 }
 
 export function getProductById(id: string): Product | undefined {
-  return PRODUCTS_DATA.find((p) => p.id === id);
+  return getActiveCatalog().find((p) => p.id === id);
 }
 
 export function getProductsByCategory(category: string): Product[] {
-  if (category === 'all') return PRODUCTS_DATA;
-  if (category === 'sale') return PRODUCTS_DATA.filter((p) => p.isSale);
-  if (category === 'new-arrivals') return PRODUCTS_DATA.filter((p) => p.isNew);
-  return PRODUCTS_DATA.filter((p) => p.category === category);
+  const catalog = getActiveCatalog();
+  if (category === 'all') return catalog;
+  if (category === 'sale') return catalog.filter((p) => p.isSale);
+  if (category === 'new-arrivals') return catalog.filter((p) => p.isNew);
+  return catalog.filter((p) => p.category === category);
 }
 
 export function getFeaturedProducts(): Product[] {
-  return PRODUCTS_DATA.filter((p) => p.isFeatured);
+  return getActiveCatalog().filter((p) => p.isFeatured);
 }
 
 export function getNewArrivals(): Product[] {
-  return PRODUCTS_DATA.filter((p) => p.isNew).slice(0, 8);
+  return getActiveCatalog().filter((p) => p.isNew).slice(0, 8);
 }
 
 export function getSaleProducts(): Product[] {
-  return PRODUCTS_DATA.filter((p) => p.isSale).slice(0, 8);
+  return getActiveCatalog().filter((p) => p.isSale).slice(0, 8);
 }
 
 export function getBestSellers(): Product[] {
-  return [...PRODUCTS_DATA].sort((a, b) => b.reviewsCount - a.reviewsCount).slice(0, 8);
+  return [...getActiveCatalog()].sort((a, b) => b.reviewsCount - a.reviewsCount).slice(0, 8);
 }
 
 export function getRelatedProducts(productId: string, category: string, limit = 4): Product[] {
-  return PRODUCTS_DATA
+  return getActiveCatalog()
     .filter((p) => p.id !== productId && (p.category === category || p.isFeatured))
     .slice(0, limit);
 }
@@ -654,13 +655,17 @@ export function mapAdminProductsToStorefront(adminProds: any[]): Product[] {
   return adminProds.map(mapAdminProductToStorefront);
 }
 
+let cachedDbProducts: Product[] | null = null;
+
 export async function fetchProductsFromCMS(): Promise<Product[]> {
   try {
     const response = await fetch(`${ADMIN_API_BASE}/products`);
     if (!response.ok) throw new Error('Failed to fetch products from CMS');
     const adminProducts: any[] = await response.json();
     cmsProductsFetchAttempted = true;
-    return mapAdminProductsToStorefront(adminProducts);
+    const mapped = mapAdminProductsToStorefront(adminProducts);
+    if (mapped.length > 0) cachedDbProducts = mapped;
+    return mapped.length > 0 ? mapped : PRODUCTS_DATA;
   } catch {
     cmsProductsFetchAttempted = true;
     return PRODUCTS_DATA;
@@ -672,5 +677,14 @@ export function hasFetchedFromCMS(): boolean {
 }
 
 export function getAllAtlasProductsFallback(): Product[] {
+  return PRODUCTS_DATA;
+}
+
+export function setCachedProducts(products: Product[]) {
+  cachedDbProducts = products;
+}
+
+function getActiveCatalog(): Product[] {
+  if (cachedDbProducts && cachedDbProducts.length > 0) return cachedDbProducts;
   return PRODUCTS_DATA;
 }

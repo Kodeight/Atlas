@@ -73,7 +73,7 @@ const AdminPage: React.FC = () => {
   ] as const;
 
   return (
-    <div className="min-h-screen flex bg-[#F7F3EA]">
+    <div className="min-h-screen flex bg-[#F7F3EA] font-sans-ui">
       {/* Sidebar - Atlas Green #1F5742 with 25px radius on right */}
       <aside
         className="w-64 shrink-0 bg-[#1F5742] text-white flex flex-col"
@@ -127,7 +127,7 @@ const AdminPage: React.FC = () => {
       {/* Content */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="bg-[#FCFBF7] border-b border-[#E7E3DA] px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-[#151515] capitalize">{activeTab}</h1>
+          <h1 className="text-lg font-semibold text-[#151515] font-sans-ui capitalize">{activeTab}</h1>
           <div className="text-xs text-[#6D6D6D]">Atlas Admin • {new Date().toLocaleDateString()}</div>
         </header>
         <main className="flex-1 p-6 bg-[#F7F3EA] overflow-auto">
@@ -135,17 +135,17 @@ const AdminPage: React.FC = () => {
             <div className="grid gap-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
-                  <div className="text-xs uppercase tracking-wider text-[#6D6D6D]">Products</div>
-                  <div className="text-2xl font-semibold text-[#151515] mt-1">{products.length}</div>
-                  <div className="text-xs text-[#6D6D6D] mt-1">Managed in CMS</div>
+                  <div className="text-xs font-medium text-[#6D6D6D] font-sans-ui">Products</div>
+                  <div className="text-2xl font-semibold text-[#151515] mt-1 font-sans-ui">{products.length}</div>
+                  <div className="text-xs text-[#6D6D6D] mt-1 font-sans-ui">Managed in CMS</div>
                 </div>
                 <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
-                  <div className="text-xs uppercase tracking-wider text-[#6D6D6D]">Orders</div>
-                  <div className="text-2xl font-semibold text-[#151515] mt-1">{orders.length}</div>
-                  <div className="text-xs text-[#6D6D6D] mt-1">COD orders</div>
+                  <div className="text-xs font-medium text-[#6D6D6D] font-sans-ui">Orders</div>
+                  <div className="text-2xl font-semibold text-[#151515] mt-1 font-sans-ui">{orders.length}</div>
+                  <div className="text-xs text-[#6D6D6D] mt-1 font-sans-ui">COD orders</div>
                 </div>
                 <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
-                  <div className="text-xs uppercase tracking-wider text-[#6D6D6D]">Revenue</div>
+                  <div className="text-xs font-medium text-[#6D6D6D] font-sans-ui">Revenue</div>
                   <div className="text-2xl font-semibold text-[#1F5742] mt-1">
                     {orders.reduce((s: number, o: any) => s + (o.total || 0), 0).toLocaleString()} DA
                   </div>

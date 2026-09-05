@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Language, TRANSLATIONS, detectBrowserLanguage } from '../i18n/translations';
-import { fetchProductsFromCMS, hasFetchedFromCMS, mapAdminProductsToStorefront, getAllAtlasProductsFallback } from '../data/products';
+import { fetchProductsFromCMS, hasFetchedFromCMS, mapAdminProductsToStorefront, getAllAtlasProductsFallback, setCachedProducts } from '../data/products';
 import { Product, CartItem, ProductColor } from '../types';
 
 interface OrderNowParams {
@@ -119,12 +119,15 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const cmsProducts = await fetchProductsFromCMS();
         setProducts(cmsProducts);
+        setCachedProducts(cmsProducts);
         setIsProductsLoading(false);
       } catch (err) {
         console.error('Failed to load products from CMS:', err);
         setError('Failed to load products. Using available data.');
         // Fall back to static Atlas products
-        setProducts(getAllAtlasProductsFallback());
+        const fallback = getAllAtlasProductsFallback();
+        setProducts(fallback);
+        setCachedProducts(fallback);
         setIsProductsLoading(false);
       }
     }

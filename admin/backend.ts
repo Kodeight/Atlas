@@ -3,10 +3,82 @@ import express, { NextFunction, Request, Response } from "express";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+// Prisma may not be generated in some environments (e.g., Vercel without DB); fallback to in-memory
+let prisma: any;
+try {
+  prisma = new PrismaClient();
+} catch {
+  // Fallback in-memory store for Vercel preview without DB
+  const store = {
+    adminUsers: new Map<string, any>([["admin-1", { id: "admin-1", email: "admin@atlas.dz", name: "Store Admin", pfp: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80", passwordHash: bcrypt.hashSync("admin123", 10) }]]),
+    products: new Map<string, any>(),
+    orders: new Map<string, any>(),
+    orderItems: new Map<string, any>(),
+  };
+  prisma = {
+    adminUser: {
+      findUnique: async ({ where }: any) => {
+        if (where.email) return Array.from(store.adminUsers.values()).find((u: any) => u.email === where.email) || null;
+        if (where.id) return store.adminUsers.get(where.id) || null;
+        return null;
+      },
+      findFirst: async ({ where }: any) => {
+        if (where.email) return Array.from(store.adminUsers.values()).find((u: any) => u.email === where.email && u.id !== where.NOT?.id) || null;
+        return null;
+      },
+      findMany: async () => Array.from(store.adminUsers.values()),
+      create: async ({ data }: any) => { store.adminUsers.set(data.id, data); return data; },
+      update: async ({ where, data }: any) => { const u = store.adminUsers.get(where.id); if (u) Object.assign(u, data); return u; },
+      delete: async ({ where }: any) => { store.adminUsers.delete(where.id); },
+    },
+    product: {
+      count: async () => store.products.size,
+      findMany: async (args?: any) => {
+        let arr = Array.from(store.products.values());
+        if (args?.orderBy?.createdAt) arr = arr.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+        return arr;
+      },
+      findUnique: async ({ where }: any) => store.products.get(where.id) || null,
+      create: async ({ data }: any) => { const p = { ...data, createdAt: new Date() }; store.products.set(data.id, p); return p; },
+      createMany: async ({ data }: any) => { data.forEach((d: any) => store.products.set(d.id, { ...d, createdAt: new Date() })); return { count: data.length }; },
+      update: async ({ where, data }: any) => { const p = store.products.get(where.id); if (p) Object.assign(p, data); return p; },
+      delete: async ({ where }: any) => { store.products.delete(where.id); },
+    },
+    order: {
+      create: async ({ data, include }: any) => {
+        const id = `order-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        const order: any = { id, customerName: data.customerName, phone: data.phone, address: data.address, total: data.total, status: data.status, date: data.date, items: [] };
+        if (data.items?.create) {
+          for (const it of data.items.create) {
+            const itemId = `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+            const item = { id: itemId, orderId: id, ...it };
+            store.orderItems.set(itemId, item);
+            order.items.push(item);
+          }
+        }
+        store.orders.set(id, order);
+        return order;
+      },
+      findMany: async (args?: any) => {
+        const orders = Array.from(store.orders.values()).map((o: any) => ({ ...o, items: Array.from(store.orderItems.values()).filter((it: any) => it.orderId === o.id) }));
+        return orders;
+      },
+      findUnique: async ({ where, include }: any) => {
+        const o = store.orders.get(where.id);
+        if (!o) return null;
+        return { ...o, items: Array.from(store.orderItems.values()).filter((it: any) => it.orderId === where.id) };
+      },
+      update: async ({ where, data, include }: any) => {
+        const o = store.orders.get(where.id);
+        if (o) o.status = data.status;
+        return { ...o, items: Array.from(store.orderItems.values()).filter((it: any) => it.orderId === where.id), date: o.date };
+      },
+    },
+  };
+}
 const JWT_SECRET = process.env.JWT_SECRET || "xcCuJMhPBtPz3cAdYGJBllHjFlEsCPREy4d8BqV3IQK";
 const APP_URL = process.env.APP_URL || "";
 const TOKEN_NAME = "atlas_admin_token";

@@ -6,6 +6,62 @@ import cookieParser from 'cookie-parser';
 import { createAdminRouter } from './admin/backend.ts';
 import { PRODUCTS_DATA } from './src/data/products.ts';
 import { ALGERIAN_WILAYAS } from './src/data/wilayas.ts';
+import { PrismaClient } from '@prisma/client';
+
+let prisma: any;
+try {
+  prisma = new PrismaClient();
+} catch {
+  prisma = {
+    product: {
+      findMany: async () => [],
+    },
+  };
+}
+
+function mapDbProductToStorefront(dbProduct: any) {
+  // DB product has: id, name, description, price, image, stock, color, bgGradient, flavor
+  // Map to storefront Product format
+  const slug = dbProduct.name
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s]+/g, '-')
+    .replace(/-+/g, '-')
+    .trim();
+  return {
+    id: dbProduct.id,
+    name: dbProduct.name,
+    slug,
+    description: dbProduct.description,
+    shortDescription: dbProduct.description.split('|')[0].trim().split('.')[0] + '.',
+    category: 'women' as const,
+    categoryLabel: 'Women',
+    price: dbProduct.price,
+    salePrice: undefined,
+    images: [dbProduct.image],
+    sizes: ['S', 'M', 'L'],
+    colors: [{ name: dbProduct.flavor || 'Default', hex: dbProduct.color || '#1F5742', imageIndex: 0 }],
+    stock: dbProduct.stock,
+    sku: `ATL-${dbProduct.id}`,
+    isSale: false,
+    isFeatured: false,
+    isNew: false,
+    rating: 4.5,
+    reviewsCount: 0,
+  };
+}
+
+async function getProductsFromDbOrFallback() {
+  try {
+    const dbProducts = await prisma.product.findMany({ orderBy: { createdAt: 'desc' } });
+    if (dbProducts.length > 0) {
+      return dbProducts.map(mapDbProductToStorefront);
+    }
+  } catch (e) {
+    console.warn('Could not fetch products from DB, using fallback:', e);
+  }
+  return PRODUCTS_DATA;
+}
 
 dotenv.config();
 
@@ -41,12 +97,14 @@ app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', brand: 'ATLAS Fashion', time: new Date().toISOString() });
 });
 
-app.get('/api/products', (_req: Request, res: Response) => {
-  res.json({ products: PRODUCTS_DATA });
+app.get('/api/products', async (_req: Request, res: Response) => {
+  const products = await getProductsFromDbOrFallback();
+  res.json({ products });
 });
 
-app.get('/api/products/:slug', (req: Request, res: Response) => {
-  const product = PRODUCTS_DATA.find((p) => p.slug === req.params.slug);
+app.get('/api/products/:slug', async (req: Request, res: Response) => {
+  const products = await getProductsFromDbOrFallback();
+  const product = products.find((p) => p.slug === req.params.slug);
   if (!product) {
     return res.status(404).json({ error: 'Product not found' });
   }
@@ -63,7 +121,7 @@ app.post('/api/calculate-delivery', (req: Request, res: Response) => {
   res.json(result);
 });
 
-app.post('/api/orders', (req: Request, res: Response) => {
+app.post('/api/orders', async (req: Request, res: Response) => {
   const { customer, items } = req.body;
 
   if (!customer || !customer.fullName || !customer.phone || !customer.wilayaCode || !customer.commune || !customer.address) {
@@ -74,12 +132,13 @@ app.post('/api/orders', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Order must contain at least one item.' });
   }
 
-  // Server-side recalculation and validation
+  // Server-side recalculation and validation - use DB as source of truth
+  const allProducts = await getProductsFromDbOrFallback();
   const validatedItems = [];
   let subtotal = 0;
 
   for (const item of items) {
-    const product = PRODUCTS_DATA.find((p) => p.id === item.productId);
+    const product = allProducts.find((p) => p.id === item.productId);
     if (!product) {
       return res.status(400).json({ error: `Product ID ${item.productId} was not found.` });
     }
