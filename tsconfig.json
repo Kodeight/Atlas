@@ -23,5 +23,5 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "exclude": ["admin", "server.ts", "node_modules", "dist"]
+  "exclude": ["admin", "server.ts", "api", "node_modules", "dist"]
 }
