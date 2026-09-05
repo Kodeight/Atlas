@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --atlas-green: #1F5742;
+    --atlas-green-dark: #164030;
+    --atlas-green-light: #286d53;
+    --atlas-green-tint: #eaf1ed;
+    --atlas-cream: #F7F3EA;
+    --atlas-warm-white: #FCFBF7;
+    --atlas-white: #FFFFFF;
+    --atlas-text: #151515;
+    --atlas-muted: #6D6D6D;
+    --atlas-border: #E7E3DA;
+    --font-display: 'Cinzel', 'Marcellus', Georgia, serif;
+    --font-serif-soft: 'Marcellus', Georgia, serif;
+    --font-body: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: var(--atlas-warm-white);
+    color: var(--atlas-text);
+  }
+
+  h1, h2, h3, .font-serif-fashion {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Custom utility classes for Atlas */
+.font-editorial {
+  font-family: 'Cinzel', 'Marcellus', Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+.font-serif-soft {
+  font-family: 'Marcellus', Georgia, serif;
+}
+
+.font-brand {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.16em;
+}
+
+.font-sans-ui {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Smooth scrolling and transitions */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar for category pills / thumbnails if needed */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

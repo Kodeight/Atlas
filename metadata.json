@@ -1,0 +1,6 @@
+{
+  "name": "Atlas — Fashion & Clothing",
+  "description": "Official fashion e-commerce store for Atlas, featuring women's and men's contemporary collections, editorial edits, and streamlined payment on delivery across 69 wilayas in Algeria.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
