@@ -9,7 +9,7 @@ import { z } from "zod";
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || "xcCuJMhPBtPz3cAdYGJBllHjFlEsCPREy4d8BqV3IQK";
 const APP_URL = process.env.APP_URL || "";
-const TOKEN_NAME = "zest_admin_token";
+const TOKEN_NAME = "atlas_admin_token";
 
 const cookieOptionsBase = {
   httpOnly: true,
@@ -210,8 +210,7 @@ const atlasProductSeeds = [
   },
 ];
 
-const initialProductSeeds = [
-}
+const initialProductSeeds: any[] = [];
 
 async function seedInitialProducts() {
   const count = await prisma.product.count();

@@ -17,7 +17,8 @@ import { QuickViewModal } from './components/QuickViewModal';
 import { OrderNowModal } from './components/OrderNowModal';
 import { SearchModal } from './components/SearchModal';
 import { Toast } from './components/Toast';
-import { NotFoundPage } from './pages/NotFoundPage';
+import NotFoundPage from './pages/NotFoundPage';
+import LoginPage from './pages/LoginPage';
 
 const MainRouter: React.FC = () => {
   const { currentPath, isProductsLoading, error, products } = useShop();

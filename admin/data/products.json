@@ -1,26 +1,26 @@
 [
   {
     "id": "orange-1",
-    "name": "ZEST Orange",
+    "name": "ATLAS Orange",
     "description": "Bursting with sun-ripened citrus and bright flavor.",
     "price": 2.99,
-    "image": "https://res.cloudinary.com/demo/image/upload/v1690000000/zest-orange.png",
+    "image": "https://res.cloudinary.com/demo/image/upload/v1690000000/atlas-orange.png",
     "stock": 24
   },
   {
     "id": "berry-1",
-    "name": "ZEST Berry",
+    "name": "ATLAS Berry",
     "description": "A lush berry infusion with a clean, refreshing finish.",
     "price": 3.49,
-    "image": "https://res.cloudinary.com/demo/image/upload/v1690000000/zest-berry.png",
+    "image": "https://res.cloudinary.com/demo/image/upload/v1690000000/atlas-berry.png",
     "stock": 18
   },
   {
     "id": "lime-1",
-    "name": "ZEST Lime",
+    "name": "ATLAS Lime",
     "description": "Cool, sharp, and exhilarating lime refreshment.",
     "price": 2.99,
-    "image": "https://res.cloudinary.com/demo/image/upload/v1690000000/zest-lime.png",
+    "image": "https://res.cloudinary.com/demo/image/upload/v1690000000/atlas-lime.png",
     "stock": 30
   }
 ]

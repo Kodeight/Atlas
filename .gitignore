@@ -7,3 +7,4 @@ coverage/
 .env*
 !.env.example
 *task.txt
+task.md

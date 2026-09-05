@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useShop } from '../context/ShopContext';
+import React from 'react';
 
 const NotFoundPage: React.FC = () => {
   return (

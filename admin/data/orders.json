@@ -5,8 +5,8 @@
     "phone": "+1 555-912-3456",
     "address": "246 Cedar Avenue, Springfield",
     "products": [
-      { "productId": "orange-1", "name": "ZEST Orange", "quantity": 2, "price": 2.99 },
-      { "productId": "berry-1", "name": "ZEST Berry", "quantity": 1, "price": 3.49 }
+      { "productId": "orange-1", "name": "ATLAS Orange", "quantity": 2, "price": 2.99 },
+      { "productId": "berry-1", "name": "ATLAS Berry", "quantity": 1, "price": 3.49 }
     ],
     "total": 9.47,
     "status": "pending",
@@ -18,7 +18,7 @@
     "phone": "+1 555-987-6543",
     "address": "512 Maple Street, Fairview",
     "products": [
-      { "productId": "lime-1", "name": "ZEST Lime", "quantity": 3, "price": 2.99 }
+      { "productId": "lime-1", "name": "ATLAS Lime", "quantity": 3, "price": 2.99 }
     ],
     "total": 8.97,
     "status": "processing",
@@ -30,7 +30,7 @@
     "phone": "+1 555-804-7210",
     "address": "78 Walnut Lane, Brookside",
     "products": [
-      { "productId": "berry-1", "name": "ZEST Berry", "quantity": 4, "price": 3.49 }
+      { "productId": "berry-1", "name": "ATLAS Berry", "quantity": 4, "price": 3.49 }
     ],
     "total": 13.96,
     "status": "delivered",

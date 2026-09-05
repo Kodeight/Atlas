@@ -7,9 +7,9 @@ interface LoginCredentials {
 }
 
 const LoginPage: React.FC = () => {
-  const { setIsCartOpen, setIsSearchOpen, navigate, t, language, showToast } = useShop();
+  const { navigate, t, language, showToast } = useShop();
   const [credentials, setCredentials] = useState<LoginCredentials>({
-    email: 'admin@zest.com',
+    email: 'admin@atlas.dz',
     password: 'admin123',
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -141,7 +141,7 @@ const LoginPage: React.FC = () => {
             {language === 'fr' ? 'Mot de passe par défaut : admin123' : 'Default password: admin123'}
           </p>
           <p className="mt-2">
-            {language === 'fr' ? 'Identifiant : admin@zest.com' : 'Username: admin@zest.com'}
+            {language === 'fr' ? 'Identifiant : admin@atlas.dz' : 'Username: admin@atlas.dz'}
           </p>
         </div>
       </div>

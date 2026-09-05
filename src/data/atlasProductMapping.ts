@@ -1,12 +1,11 @@
-import { Product } from './products';
-import { Product as AdminProduct } from '../admin/types';
+import { Product } from '../types';
 
 /**
  * Map an admin product (from CMS/database) to a storefront product format.
  * This ensures the CMS is the source of truth and the storefront displays
  * products from the same data source.
  */
-export function mapAdminProductToStorefront(adminProd: AdminProduct): Product {
+export function mapAdminProductToStorefront(adminProd: any): Product {
   const { id, name, description, price, image, stock, color, bgGradient } = adminProd;
 
   // Generate slug from name
@@ -21,13 +20,13 @@ export function mapAdminProductToStorefront(adminProd: AdminProduct): Product {
   let category: 'women' | 'men' | 'dresses' | 'tops' | 'bottoms' | 'sets' | 'accessories' | 'new-arrivals' | 'sale' = 'women';
   const nameLower = name.toLowerCase();
   if (/blazer|jacket|coat|outerwear/i.test(nameLower)) category = 'tops';
-  else if /shirt|top|tshirt|tee|blouse/i.test(nameLower) || /shirt|blouse/i.test(nameLower)) category = 'tops';
-  else if /trouser|pants|bottom|skirt|shorts/i.test(nameLower)) category = 'bottoms';
-  else if /dress|gown|evening/i.test(nameLower)) category = 'dresses';
-  else if /set|co-ord|matching/i.test(nameLower)) category = 'sets';
-  else if /accessory|bag|scarf|hijab|hat/i.test(nameLower)) category = 'accessories';
-  else if /new|arrival|latest/i.test(nameLower)) category = 'new-arrivals';
-  else if /sale|discount|promo/i.test(nameLower)) category = 'sale';
+  else if (/shirt|top|tshirt|tee|blouse/i.test(nameLower) || /shirt|blouse/i.test(nameLower)) category = 'tops';
+  else if (/trouser|pants|bottom|skirt|shorts/i.test(nameLower)) category = 'bottoms';
+  else if (/dress|gown|evening/i.test(nameLower)) category = 'dresses';
+  else if (/set|co-ord|matching/i.test(nameLower)) category = 'sets';
+  else if (/accessory|bag|scarf|hijab|hat/i.test(nameLower)) category = 'accessories';
+  else if (/new|arrival|latest/i.test(nameLower)) category = 'new-arrivals';
+  else if (/sale|discount|promo/i.test(nameLower)) category = 'sale';
 
   // Map color from admin format to storefront format
   let colors: { name: string; hex: string; imageIndex?: number }[] = [];
@@ -40,7 +39,7 @@ export function mapAdminProductToStorefront(adminProd: AdminProduct): Product {
   // Determine sizes based on product name keywords
   let sizes: string[] = ['S', 'M', 'L'];
   const nameLower2 = name.toLowerCase();
-  if /blazer|jacket|coat|trouser|pants|shirt|dress|tunic|maxi|mini|skirt/i.test(nameLower2)) {
+  if (/blazer|jacket|coat|trouser|pants|shirt|dress|tunic|maxi|mini|skirt/i.test(nameLower2)) {
     // Sizes would be determined more specifically per product type
   }
 
@@ -68,6 +67,7 @@ export function mapAdminProductToStorefront(adminProd: AdminProduct): Product {
     description,
     shortDescription,
     category,
+    categoryLabel: category,
     price,
     salePrice,
     images,
@@ -88,7 +88,7 @@ export function mapAdminProductToStorefront(adminProd: AdminProduct): Product {
 /**
  * Map an array of admin products to storefront product format.
  */
-export function mapAdminProductsToStorefront(adminProds: AdminProduct[]): Product[] {
+export function mapAdminProductsToStorefront(adminProds: any[]): Product[] {
   return adminProds.map(mapAdminProductToStorefront);
 }
 

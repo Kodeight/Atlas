@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Language, TRANSLATIONS, detectBrowserLanguage } from '../i18n/translations';
 import { fetchProductsFromCMS, hasFetchedFromCMS, mapAdminProductsToStorefront, getAllAtlasProductsFallback } from '../data/products';
-import { Product } from '../types';
+import { Product, CartItem, ProductColor } from '../types';
 
 interface OrderNowParams {
   product?: Product;

@@ -57,18 +57,18 @@ export const ALGERIAN_WILAYAS: Wilaya[] = [
   { code: '54', name: '54 - Timimoun', nameAr: 'تيميمون', zone: 'south', deliveryFee: 850, estimatedDays: '3 - 5 days' },
   { code: '55', name: '55 - Touggourt', nameAr: 'تقرت', zone: 'south', deliveryFee: 750, estimatedDays: '2 - 4 days' },
   { code: '56', name: '56 - Djanet', nameAr: 'جانت', zone: 'south', deliveryFee: 980, estimatedDays: '5 - 7 days' },
-  { code: '57', name: '57 - El Meghaier', nameAr: 'آل مي gaugeر', zone: 'south', deliveryFee: 900, estimatedDays: '4 - 6 days' },
-  { code: '58', name: '58 - El Menia', nameAr: 'وادي نا تم', zone: 'south', deliveryFee: 850, estimatedDays: '3 - 5 days' },
+  { code: '57', name: '57 - El Meghaier', nameAr: 'المغير', zone: 'south', deliveryFee: 900, estimatedDays: '4 - 6 days' },
+  { code: '58', name: '58 - El Menia', nameAr: 'المنيعة', zone: 'south', deliveryFee: 850, estimatedDays: '3 - 5 days' },
   { code: '59', name: '59 - Aflou', nameAr: 'آفلو', zone: 'high_plateaus', deliveryFee: 650, estimatedDays: '2 - 4 days' },
   { code: '60', name: '60 - Barika', nameAr: 'بريكة', zone: 'north_east', deliveryFee: 600, estimatedDays: '2 - 3 days' },
-  { code: '61', name: '61 - El Kantara', nameAr: 'قصر كانتارا', zone: 'high_plateaus', deliveryFee: 650, estimatedDays: '2 - 4 days' },
-  { code: '62', name: '62 - Bir El Ater', nameAr: 'عين العمال', zone: 'high_plateaus', deliveryFee: 650, estimatedDays: '2 - 3 days' },
-  { code: '63', name: '63 - El Aricha', nameAr: 'العريش', zone: 'high_plateaus', deliveryFee: 700, estimatedDays: '2 - 4 days' },
+  { code: '61', name: '61 - El Kantara', nameAr: 'القنطرة', zone: 'high_plateaus', deliveryFee: 650, estimatedDays: '2 - 4 days' },
+  { code: '62', name: '62 - Bir El Ater', nameAr: 'بئر العاتر', zone: 'high_plateaus', deliveryFee: 650, estimatedDays: '2 - 3 days' },
+  { code: '63', name: '63 - El Aricha', nameAr: 'العريشة', zone: 'high_plateaus', deliveryFee: 700, estimatedDays: '2 - 4 days' },
   { code: '64', name: '64 - Ksar Chellala', nameAr: 'قصر الشلالة', zone: 'high_plateaus', deliveryFee: 600, estimatedDays: '2 - 3 days' },
-  { code: '65', name: '65 - Aïn Oussera', nameAr: 'عين وسارة', zone: 'high_plateaus', deliveryFee: 750, estimatedDays: '3 - 5 days' },
+  { code: '65', name: '65 - Aïn Ouessara', nameAr: 'عين وسارة', zone: 'high_plateaus', deliveryFee: 750, estimatedDays: '3 - 5 days' },
   { code: '66', name: '66 - Messaad', nameAr: 'مسعد', zone: 'high_plateaus', deliveryFee: 700, estimatedDays: '2 - 4 days' },
-  { code: '67', name: '67 - Ksar El Boukhari', nameAr: 'خير الدين ب Expert', zone: 'high_plateaus', deliveryFee: 650, estimatedDays: '2 - 4 days' },
-  { code: '68', name: '68 - Bou Saada', nameAr: 'بوسعادة', zone: 'high_plateaus', deliveryFee: 600, estimatedDays: '2 - 3 days' },
+  { code: '67', name: '67 - Ksar El Boukhari', nameAr: 'قصر البخاري', zone: 'high_plateaus', deliveryFee: 650, estimatedDays: '2 - 4 days' },
+  { code: '68', name: '68 - Bou Saâda', nameAr: 'بوسعادة', zone: 'high_plateaus', deliveryFee: 600, estimatedDays: '2 - 3 days' },
   { code: '69', name: '69 - El Abiodh Sidi Cheikh', nameAr: 'الأبيض سيدي الشيخ', zone: 'south', deliveryFee: 750, estimatedDays: '3 - 5 days' },
 ];
 
@@ -78,5 +78,4 @@ export function getWilayaByCode(code: string): Wilaya | undefined {
 
 export function getDefaultWilaya(): Wilaya {
   return ALGERIAN_WILAYAS.find((w) => w.code === '16') || ALGERIAN_WILAYAS[0];
-} 
- 
+}
