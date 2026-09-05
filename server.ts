@@ -2,6 +2,8 @@ import express, { Request, Response } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
+import { createAdminRouter } from './admin/backend.ts';
 import { PRODUCTS_DATA } from './src/data/products.ts';
 import { ALGERIAN_WILAYAS } from './src/data/wilayas.ts';
 
@@ -13,7 +15,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3000;
 
+app.use(cookieParser());
 app.use(express.json());
+// Admin API - must be before static serving for Vercel production
+app.use('/admin/api', createAdminRouter());
 
 // In-memory persistent order storage for the server session
 const storedOrders: Map<string, any> = new Map();

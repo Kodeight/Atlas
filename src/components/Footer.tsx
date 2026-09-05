@@ -231,6 +231,9 @@ export const Footer: React.FC = () => {
           <button type="button" onClick={() => navigate('/faq')} className="hover:text-white transition-colors cursor-pointer">
             {language === 'fr' ? 'Paiement à la Livraison' : 'Payment on Delivery'}
           </button>
+          <button type="button" onClick={() => navigate('/admin')} className="hover:text-white transition-colors cursor-pointer opacity-50 hover:opacity-100 text-[11px] tracking-wider">
+            Admin
+          </button>
         </div>
       </div>
     </footer>

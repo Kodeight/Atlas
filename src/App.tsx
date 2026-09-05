@@ -19,9 +19,10 @@ import { SearchModal } from './components/SearchModal';
 import { Toast } from './components/Toast';
 import NotFoundPage from './pages/NotFoundPage';
 import LoginPage from './pages/LoginPage';
+import AdminPage from './pages/AdminPage';
 
 const MainRouter: React.FC = () => {
-  const { currentPath, isProductsLoading, error, products } = useShop();
+  const { currentPath } = useShop();
 
   // Scroll to top on path change
   useEffect(() => {
@@ -79,31 +80,49 @@ const MainRouter: React.FC = () => {
     return <LoginPage />;
   }
 
+  if (currentPath === '/admin' || currentPath.startsWith('/admin/')) {
+    return <AdminPage />;
+  }
+
   // Fallback to 404
   return <NotFoundPage />;
+};
+
+const AppContent: React.FC = () => {
+  const { currentPath } = useShop();
+  const isAdminRoute = currentPath === '/admin' || currentPath.startsWith('/admin/');
+  const isLoginRoute = currentPath === '/login';
+  const hideChrome = isAdminRoute || isLoginRoute;
+
+  if (hideChrome) {
+    return (
+      <main className="grow">
+        <MainRouter />
+      </main>
+    );
+  }
+
+  return (
+    <>
+      <Header />
+      <main className="grow">
+        <MainRouter />
+      </main>
+      <Footer />
+      <CartDrawer />
+      <QuickViewModal />
+      <OrderNowModal />
+      <SearchModal />
+      <Toast />
+    </>
+  );
 };
 
 export default function App() {
   return (
     <ShopProvider>
       <div className="min-h-screen flex flex-col bg-[#FCFBF7] text-[#151515] selection:bg-[#1F5742] selection:text-white">
-        {/* Persistent Header */}
-        <Header />
-
-        {/* Dynamic Page Content */}
-        <main className="grow">
-          <MainRouter />
-        </main>
-
-        {/* Persistent Footer */}
-        <Footer />
-
-        {/* Global Overlays & Modals */}
-        <CartDrawer />
-        <QuickViewModal />
-        <OrderNowModal />
-        <SearchModal />
-        <Toast />
+        <AppContent />
       </div>
     </ShopProvider>
   );
