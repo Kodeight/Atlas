@@ -26,13 +26,13 @@ function mapAdminProductToStorefront(adminProd: any): Product {
   let category: Product['category'] = 'women';
   const nameLower = name.toLowerCase();
   if (/blazer|jacket|coat|outerwear/i.test(nameLower)) category = 'tops';
-  else if /shirt|top|tshirt|tee|blouse/i.test(nameLower)) category = 'tops';
-  else if /trouser|pants|bottom|skirt|shorts/i.test(nameLower)) category = 'bottoms';
-  else if /dress|gown|evening/i.test(nameLower)) category = 'dresses';
-  else if /set|co-ord|matching/i.test(nameLower)) category = 'sets';
-  else if /accessory|bag|scarf|hijab|hat/i.test(nameLower)) category = 'accessories';
-  else if /new|arrival|latest/i.test(nameLower)) category = 'new-arrivals';
-  else if /sale|discount|promo/i.test(nameLower)) category = 'sale';
+  else if (/shirt|top|tshirt|tee|blouse/i.test(nameLower)) category = 'tops';
+  else if (/trouser|pants|bottom|skirt|shorts/i.test(nameLower)) category = 'bottoms';
+  else if (/dress|gown|evening/i.test(nameLower)) category = 'dresses';
+  else if (/set|co-ord|matching/i.test(nameLower)) category = 'sets';
+  else if (/accessory|bag|scarf|hijab|hat/i.test(nameLower)) category = 'accessories';
+  else if (/new|arrival|latest/i.test(nameLower)) category = 'new-arrivals';
+  else if (/sale|discount|promo/i.test(nameLower)) category = 'sale';
 
   // Map color from admin format to storefront format
   let colors: { name: string; hex: string; imageIndex?: number }[] = [];
@@ -150,7 +150,7 @@ export function getAllAtlasProductsFallback(): Product[] {
       price: 3200,
       stock: 35,
       colors: [{ name: 'Pure White', hex: '#FFFFFF' }],
-      images: ['/tee-white.webp'],
+      images: ['/crowneck.png'],
     },
   ];
 }
