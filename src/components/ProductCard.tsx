@@ -142,10 +142,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               {product.colors.length} {language === 'fr' ? 'couleurs' : 'colors'}
             </span>
           </div>
-        ))}
-            </span>
-          )}
-        </div>
+        )}
 
         {/* Hover Action Overlay with Tactile Recoil */}
         <div className="absolute inset-x-2 bottom-2.5 flex gap-1.5 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-250 z-20">
