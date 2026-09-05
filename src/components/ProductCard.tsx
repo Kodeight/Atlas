@@ -12,13 +12,9 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { navigate, openQuickView, openOrderNow, t, language } = useShop();
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
+  const [selectedColor, setSelectedColor] = useState(product.colors[0]);
 
-  const displayImage =
-    isHovered && product.images.length > 1
-      ? product.images[1]
-      : product.images[activeImageIndex] || product.images[0];
+  const displayImage = product.images[0];
 
   const handleCardClick = () => {
     navigate(`/product/${product.slug}`);
@@ -31,7 +27,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const handleOrderNowClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const defaultColor = product.colors[0];
+    const defaultColor = selectedColor || product.colors[0];
     const defaultSize = product.sizes[0] || 'M';
     openOrderNow({
       product,
@@ -47,8 +43,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       transition={{ type: 'spring', stiffness: 350, damping: 25 }}
       className="group relative flex flex-col cursor-pointer bg-transparent"
       onClick={handleCardClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       {/* Image Container with 4:5 Aspect Ratio */}
       <div className="relative w-full aspect-[4/5] bg-[#F2EDE2] overflow-hidden rounded-xs">
@@ -126,7 +120,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Color Swatches */}
         {product.colors.length > 1 && (
-          <div className="flex items-center gap-1.5 mt-2">
+          <div className="flex items-center gap-1.5 my-2.5">
             {product.colors.map((color) => (
               <button
                 key={color.name}
@@ -134,10 +128,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 aria-label={`Select ${color.name}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setActiveImageIndex(color.imageIndex ?? 0);
+                  setSelectedColor(color);
                 }}
                 className={`w-3 h-3 rounded-full border transition-transform ${
-                  activeImageIndex === (color.imageIndex ?? 0)
+                  selectedColor?.name === color.name
                     ? 'scale-125 border-[#1F5742] ring-1 ring-[#1F5742]'
                     : 'border-black/20 hover:scale-110'
                 }`}

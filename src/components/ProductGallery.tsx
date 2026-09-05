@@ -77,9 +77,11 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productN
         )}
 
         {/* Counter Pill */}
-        <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-xs text-white text-[11px] font-medium px-2.5 py-0.5 rounded-full">
-          {activeIndex + 1} / {images.length}
-        </div>
+        {images.length > 1 && (
+          <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-xs text-white text-[11px] font-medium px-2.5 py-0.5 rounded-full">
+            {activeIndex + 1} / {images.length}
+          </div>
+        )}
       </div>
 
       {/* Thumbnails Row */}
@@ -162,7 +164,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productN
           </div>
 
           <div className="absolute bottom-4 inset-x-0 text-center text-white/70 text-xs font-sans-ui">
-            {productName} • {activeIndex + 1} of {images.length}
+            {productName}{images.length > 1 ? ` • ${activeIndex + 1} of ${images.length}` : ''}
           </div>
         </div>
       )}

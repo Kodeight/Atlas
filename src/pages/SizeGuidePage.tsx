@@ -58,8 +58,8 @@ export const SizeGuidePage: React.FC = () => {
         {/* Women's Table */}
         {tab === 'women' && (
           <AnimatedReveal animation="soft-rise" delay={0.1}>
-            <div className="bg-white border border-[#E7E3DA] rounded-xs overflow-hidden shadow-xs">
-              <table className="w-full text-left text-xs">
+            <div className="bg-white border border-[#E7E3DA] rounded-xs overflow-hidden overflow-x-auto shadow-xs">
+              <table className="w-full text-left text-xs min-w-[480px]">
                 <thead className="bg-[#F7F3EA] text-[#1F5742] uppercase tracking-wider font-semibold border-b border-[#E7E3DA]">
                   <tr>
                     <th className="py-3 px-4">{language === 'fr' ? 'Taille' : 'Size'}</th>
@@ -114,8 +114,8 @@ export const SizeGuidePage: React.FC = () => {
         {/* Men's Table */}
         {tab === 'men' && (
           <AnimatedReveal animation="soft-rise" delay={0.1}>
-            <div className="bg-white border border-[#E7E3DA] rounded-xs overflow-hidden shadow-xs">
-              <table className="w-full text-left text-xs">
+            <div className="bg-white border border-[#E7E3DA] rounded-xs overflow-hidden overflow-x-auto shadow-xs">
+              <table className="w-full text-left text-xs min-w-[480px]">
                 <thead className="bg-[#F7F3EA] text-[#1F5742] uppercase tracking-wider font-semibold border-b border-[#E7E3DA]">
                   <tr>
                     <th className="py-3 px-4">{language === 'fr' ? 'Taille' : 'Size'}</th>

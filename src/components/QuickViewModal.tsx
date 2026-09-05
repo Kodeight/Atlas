@@ -152,11 +152,11 @@ export const QuickViewModal: React.FC = () => {
 
               {/* Color Swatches */}
               {product.colors.length > 0 && (
-                <div className="space-y-1.5 pt-1">
+                <div className="space-y-1.5 py-1.5">
                   <span className="text-xs font-semibold text-[#151515] block">
                     {language === 'fr' ? 'Couleur :' : 'Color:'} <span className="font-normal text-[#6D6D6D]">{selectedColor?.name}</span>
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 py-0.5">
                     {product.colors.map((color) => {
                       const isSelected = selectedColor?.name === color.name;
                       return (
@@ -165,9 +165,6 @@ export const QuickViewModal: React.FC = () => {
                           type="button"
                           onClick={() => {
                             setSelectedColor(color);
-                            if (color.imageIndex !== undefined) {
-                              setActiveImageIndex(color.imageIndex);
-                            }
                           }}
                           className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all ${
                             isSelected ? 'ring-2 ring-[#1F5742] border-white scale-110' : 'border-black/20 hover:scale-105'
@@ -184,7 +181,7 @@ export const QuickViewModal: React.FC = () => {
               )}
 
               {/* Sizes */}
-              <div className="space-y-1.5 pt-1">
+              <div className="space-y-1.5 py-1.5">
                 <div className="flex justify-between items-center text-xs">
                   <span className="font-semibold text-[#151515]">
                     {t('selectSize')}: <span className="font-normal text-[#6D6D6D]">{selectedSize}</span>

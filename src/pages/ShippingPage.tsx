@@ -110,8 +110,8 @@ export const ShippingPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="max-h-96 overflow-y-auto border border-[#E7E3DA] rounded-xs">
-              <table className="w-full text-left text-xs">
+            <div className="max-h-96 overflow-y-auto overflow-x-auto border border-[#E7E3DA] rounded-xs">
+              <table className="w-full text-left text-xs min-w-[520px]">
                 <thead className="bg-[#F7F3EA] text-[#1F5742] uppercase tracking-wider font-semibold border-b border-[#E7E3DA] sticky top-0">
                   <tr>
                     <th className="py-2.5 px-4">{language === 'fr' ? 'Code' : 'Code'}</th>

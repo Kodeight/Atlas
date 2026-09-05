@@ -167,14 +167,14 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
 
               {/* Color Swatch Selection */}
               {product.colors.length > 0 && (
-                <div className="space-y-2 pt-4 border-t border-[#E7E3DA]">
+                <div className="py-4 border-t border-[#E7E3DA] space-y-3">
                   <div className="flex justify-between items-center text-xs">
                     <span className="font-semibold text-[#151515] font-sans-ui">
                       {language === 'fr' ? 'COULEUR :' : 'COLOR:'}{' '}
                       <span className="font-normal text-[#6D6D6D]">{selectedColor?.name}</span>
                     </span>
                   </div>
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2.5 py-1">
                     {product.colors.map((color) => {
                       const isSelected = selectedColor?.name === color.name;
                       return (
@@ -199,7 +199,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
               )}
 
               {/* Size Selection */}
-              <div className="space-y-2 pt-4 border-t border-[#E7E3DA]">
+              <div className="py-4 border-t border-[#E7E3DA] space-y-3">
                 <div className="flex justify-between items-center text-xs">
                   <span className="font-semibold text-[#151515] font-sans-ui">
                     {language === 'fr' ? 'CHOISIR LA TAILLE :' : 'SELECT SIZE:'}{' '}

@@ -74,10 +74,10 @@ export const HomePage: React.FC = () => {
 
               {/* Giant Serif 'FASHION' Headline */}
               <AnimatedReveal animation="soft-rise" delay={0.2} className="relative">
-                <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-editorial font-normal text-[#1F5742] tracking-tight leading-[0.9]">
+                <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-editorial font-normal text-[#1F5742] tracking-tight leading-[0.9] break-words">
                   {t('heroTitle')}
                 </h1>
-                <p className="text-xl sm:text-2xl md:text-3xl font-editorial italic text-[#151515] mt-2 sm:mt-3">
+                <p className="text-lg sm:text-2xl md:text-3xl font-serif-soft text-[#151515] mt-2 sm:mt-3 leading-snug">
                   {t('heroTagline')}
                 </p>
               </AnimatedReveal>
@@ -203,23 +203,19 @@ export const HomePage: React.FC = () => {
             <div className="lg:col-span-5 space-y-6">
               <AnimatedReveal animation="slide-right" delay={0.15}>
                 <span className="text-xs font-semibold tracking-[0.25em] uppercase text-[#A3B899] block font-sans-ui">
-                  {language === 'fr' ? 'MANIFESTE ÉDITORIAL' : 'EDITORIAL STATEMENT'}
+                  {t('editorialStatement')}
                 </span>
 
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-editorial font-normal leading-tight mt-2">
-                  THE ATLAS EDIT
+                  {t('theAtlasEdit')}
                 </h2>
 
                 <blockquote className="text-sm sm:text-base text-white/80 leading-relaxed font-sans-ui italic mt-4">
-                  {language === 'fr'
-                    ? '« La mode chez Atlas naît de la rencontre entre la lumière méditerranéenne, une élégance intemporelle et des matières nobles. Nous sélectionnons des toiles de lin et des coupes pensées pour le climat et le raffinement algérien. »'
-                    : '“Fashion at Atlas is defined by the balance between Mediterranean light, relaxed elegance, and enduring quality. We select breathable fabrics that honor the climate and character of our country.”'}
+                  {t('theAtlasQuote')}
                 </blockquote>
 
                 <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-sans-ui mt-3">
-                  {language === 'fr'
-                    ? 'Des réunions de travail à Didouche Mourad aux douces soirées sur la corniche, nos pièces s’adaptent avec fluidité à chaque moment de votre journée.'
-                    : 'From morning meetings in Didouche Mourad to festive evenings along the coastal corniche, our garments transition seamlessly between moments.'}
+                  {t('theAtlasBody')}
                 </p>
 
                 <div className="pt-4">
@@ -228,7 +224,7 @@ export const HomePage: React.FC = () => {
                     onClick={() => navigate('/shop')}
                     className="px-7 py-3.5 bg-[#F7F3EA] hover:bg-white text-[#1F5742] text-xs font-semibold tracking-[0.18em] uppercase rounded-xs transition-transform active:scale-95 shadow-md cursor-pointer"
                   >
-                    {language === 'fr' ? 'DÉCOUVRIR LA COLLECTION' : 'DISCOVER THE COLLECTION'}
+                    {t('shopCollection')}
                   </button>
                 </div>
               </AnimatedReveal>

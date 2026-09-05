@@ -52,10 +52,12 @@ export const TRANSLATIONS = {
 
     // Hero & Editorial
     heroTag: 'Campagne Éditoriale 2026',
-    heroSubhead: 'CAMPAGNE ÉDITORIALE 2026',
+    heroSubhead: 'Campagne Éditoriale 2026',
     heroTitle: 'FASHION',
     heroSubtitle: 'L’Élégance Méditerranéenne Façonnée pour l’Algérie',
     heroTagline: 'L’Élégance Méditerranéenne Façonnée pour l’Algérie',
+    heroSubtext: 'L’Élégance Méditerranéenne • Maison de Mode Algérienne',
+    heroMainTitle: 'L’Allure Contemporaine Algérienne',
     heroDescription:
       'Des silhouettes pures en lin lavé, viscoses fluides et coupes tailleur intemporelles. Une confection pensée pour le climat et l’allure contemporaine algérienne, livrée directement chez vous.',
     heroShopButton: 'DÉCOUVRIR LA COLLECTION',
@@ -222,10 +224,12 @@ export const TRANSLATIONS = {
 
     // Hero & Editorial
     heroTag: 'Seasonal Campaign 2026',
-    heroSubhead: 'SEASONAL CAMPAIGN 2026',
+    heroSubhead: 'Seasonal Campaign 2026',
     heroTitle: 'FASHION',
     heroSubtitle: 'Mediterranean Elegance Tailored for Algeria',
     heroTagline: 'Mediterranean Elegance Tailored for Algeria',
+    heroSubtext: 'Mediterranean Elegance • Algerian Fashion House',
+    heroMainTitle: 'Contemporary Algerian Style',
     heroDescription:
       'Pure silhouettes crafted in washed European linen, flowing viscose, and fine tailoring. Designed for Algerian living and delivered straight to your door with payment upon arrival.',
     heroShopButton: 'SHOP THE COLLECTION',

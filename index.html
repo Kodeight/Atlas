@@ -3,6 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Compatibility shim for environments/tools where window.fetch is a getter-only property
+      (function() {
+        try {
+          var origFetch = window.fetch;
+          if (typeof origFetch === 'function') {
+            var _current = function() {
+              return origFetch.apply(window, arguments);
+            };
+            var descriptor = {
+              get: function() {
+                return _current;
+              },
+              set: function(newFetch) {
+                _current = newFetch;
+              },
+              configurable: true,
+              enumerable: true,
+            };
+            try {
+              Object.defineProperty(window, 'fetch', descriptor);
+            } catch (_) {}
+            if (typeof Window !== 'undefined' && Window.prototype) {
+              try {
+                Object.defineProperty(Window.prototype, 'fetch', descriptor);
+              } catch (_) {}
+            }
+          }
+        } catch (_) {}
+      })();
+    </script>
     <title>Atlas — Fashion &amp; Clothing</title>
     <meta name="description" content="Official fashion e-commerce store for Atlas, featuring women's and men's contemporary collections, editorial edits, and streamlined payment on delivery across 69 wilayas in Algeria." />
     <meta property="og:title" content="Atlas — Fashion &amp; Clothing" />
