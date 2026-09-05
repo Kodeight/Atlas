@@ -17,9 +17,10 @@ import { QuickViewModal } from './components/QuickViewModal';
 import { OrderNowModal } from './components/OrderNowModal';
 import { SearchModal } from './components/SearchModal';
 import { Toast } from './components/Toast';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 const MainRouter: React.FC = () => {
-  const { currentPath, products, isProductsLoading, error } = useShop();
+  const { currentPath, isProductsLoading, error, products } = useShop();
 
   // Scroll to top on path change
   useEffect(() => {
@@ -73,8 +74,12 @@ const MainRouter: React.FC = () => {
     return <FaqPage />;
   }
 
-  // Fallback to Home
-  return <HomePage />;
+  if (currentPath === '/login') {
+    return <LoginPage />;
+  }
+
+  // Fallback to 404
+  return <NotFoundPage />;
 };
 
 export default function App() {
