@@ -7,10 +7,10 @@ interface LoginCredentials {
 }
 
 const LoginPage: React.FC = () => {
-  const { navigate, t, language, showToast } = useShop();
+  const { navigate, language, showToast } = useShop();
   const [credentials, setCredentials] = useState<LoginCredentials>({
-    email: 'admin@atlas.dz',
-    password: 'admin123',
+    email: '',
+    password: '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,11 +73,22 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FCFBF7] text-[#151515]">
-      <div className="bg-white w-full max-w-md p-8 rounded-lg shadow-2xl border border-[#E7E3DA]">
-        <h2 className="text-2xl font-bold text-[#1F5742] mb-6 text-center">
-          {t('adminLogin')}
-        </h2>
+    <div className="min-h-screen flex items-center justify-center bg-[#F7F3EA] text-[#151515] px-4">
+      <div className="bg-white w-full max-w-[440px] p-8 sm:p-10 rounded-xl shadow-xl border border-[#E7E3DA]">
+        <div className="flex flex-col items-center mb-6">
+          <img
+            src="https://atlasdz.ifree.page/wp-content/uploads/2026/07/ATLAS-logo-2.png"
+            alt="Atlas"
+            className="w-12 h-12 object-contain mb-3"
+            loading="eager"
+          />
+          <h2 className="text-2xl font-bold text-[#1F5742] text-center">
+            {language === 'fr' ? 'Connexion Admin' : 'Admin Login'}
+          </h2>
+          <p className="text-sm text-[#6D6D6D] mt-2 text-center">
+            {language === 'fr' ? 'Connectez-vous à votre tableau de bord Atlas' : 'Sign in to your Atlas dashboard'}
+          </p>
+        </div>
 
         {error && (
           <div className="bg-[#F7F3EA] text-[#1F5742] p-3 rounded-md mb-4 flex items-center gap-2">
@@ -121,29 +132,28 @@ const LoginPage: React.FC = () => {
               }
               required
               className="w-full px-4 py-3 border border-[#E7E3DA] rounded-lg focus:outline-none focus:border-[#1F5742] transition-colors"
-              placeholder={language === 'fr' ? 'admin123' : 'admin123'}
+              placeholder="••••••••"
             />
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full py-3.5 px-6 bg-[#1F5742] text-white font-semibold uppercase tracking-[0.15em] rounded-lg hover:bg-[#164030] transition-colors flex items-center justify-center gap-2 ${
+            className={`w-full min-h-[48px] py-3.5 px-6 bg-[#1F5742] text-white font-semibold uppercase tracking-[0.12em] rounded-lg hover:bg-[#164030] focus:outline-none focus:ring-2 focus:ring-[#1F5742]/30 transition-colors flex items-center justify-center gap-2 ${
               isLoading ? 'opacity-70 cursor-not-allowed' : ''
             }`}
           >
-            <span>{isLoading ? (language === 'fr' ? 'Connexion...' : 'Logging in...') : t('login')}</span>
+            <span className="text-white">
+              {isLoading
+                ? language === 'fr'
+                  ? 'Connexion en cours…'
+                  : 'Logging in…'
+                : language === 'fr'
+                  ? 'Se connecter'
+                  : 'Log in'}
+            </span>
           </button>
         </form>
-
-        <div className="mt-6 text-center text-xs text-[#6D6D6D]">
-          <p>
-            {language === 'fr' ? 'Mot de passe par défaut : admin123' : 'Default password: admin123'}
-          </p>
-          <p className="mt-2">
-            {language === 'fr' ? 'Identifiant : admin@atlas.dz' : 'Username: admin@atlas.dz'}
-          </p>
-        </div>
       </div>
     </div>
   );
