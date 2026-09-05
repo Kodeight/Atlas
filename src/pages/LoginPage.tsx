@@ -139,7 +139,7 @@ const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full min-h-[48px] py-3.5 px-6 bg-[#1F5742] text-white font-semibold uppercase tracking-[0.12em] rounded-lg hover:bg-[#164030] focus:outline-none focus:ring-2 focus:ring-[#1F5742]/30 transition-colors flex items-center justify-center gap-2 ${
+            className={`w-full min-h-[48px] py-3.5 px-6 bg-[#1F5742] text-white font-semibold rounded-lg hover:bg-[#164030] focus:outline-none focus:ring-2 focus:ring-[#1F5742]/30 transition-colors flex items-center justify-center gap-2 ${
               isLoading ? 'opacity-70 cursor-not-allowed' : ''
             }`}
           >
