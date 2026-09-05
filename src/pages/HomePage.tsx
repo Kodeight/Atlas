@@ -74,12 +74,9 @@ export const HomePage: React.FC = () => {
 
               {/* Giant Serif 'FASHION' Headline */}
               <AnimatedReveal animation="soft-rise" delay={0.2} className="relative">
-                <img
-                  src="/fashion.webp"
-                  alt="FASHION"
-                  className="w-full h-full object-contain block"
-                  style="width: 100%; height: auto; display: block; object-fit: contain;"
-                />
+                <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-editorial font-normal text-[#1F5742] tracking-tight leading-[0.9] break-words">
+                  {t('heroTitle')}
+                </h1>
                 <p className="text-lg sm:text-2xl md:text-3xl font-serif-soft text-[#151515] mt-2 sm:mt-3 leading-snug">
                   {t('heroTagline')}
                 </p>
