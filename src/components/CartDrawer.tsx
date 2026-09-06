@@ -16,11 +16,13 @@ export const CartDrawer: React.FC = () => {
     navigate,
     language,
     t,
+    codEnabled,
   } = useShop();
 
   const freeShippingDifference = FREE_DELIVERY_THRESHOLD - cartSubtotal;
 
   const handleCheckout = () => {
+    if (!codEnabled) return;
     openOrderNow({ isFromCart: true });
   };
 
@@ -233,7 +235,15 @@ export const CartDrawer: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleCheckout}
-                    className="w-full py-3.5 px-4 bg-[#1F5742] hover:bg-[#164030] text-white text-xs font-semibold uppercase tracking-[0.15em] rounded transition-transform active:scale-98 flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                    disabled={!codEnabled}
+                    title={
+                      !codEnabled
+                        ? language === 'fr'
+                          ? 'Commandes désactivées'
+                          : 'Ordering disabled'
+                        : undefined
+                    }
+                    className="w-full py-3.5 px-4 bg-[#1F5742] hover:bg-[#164030] text-white text-xs font-semibold uppercase tracking-[0.15em] rounded transition-transform active:scale-98 flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <span>{t('orderNowPayOnDelivery')}</span>
                     <ArrowRight className="w-4 h-4" />

@@ -22,6 +22,12 @@ export interface ProductSizeOption {
   stockCount?: number;
 }
 
+export interface ProductGalleryImage {
+  url: string;
+  alt?: string;
+  colorName?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -33,6 +39,8 @@ export interface Product {
   price: number; // in DA
   salePrice?: number; // in DA
   images: string[];
+  galleryEnabled?: boolean;
+  gallery?: ProductGalleryImage[];
   sizes: string[];
   sizeOptions?: ProductSizeOption[];
   colors: ProductColor[];

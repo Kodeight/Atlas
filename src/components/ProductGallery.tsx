@@ -1,29 +1,70 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Maximize2, X, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface ProductGalleryProps {
   images: string[];
   productName: string;
+  autoRotate?: boolean;
+  rotateIntervalMs?: number;
 }
 
-export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productName }) => {
+export const ProductGallery: React.FC<ProductGalleryProps> = ({
+  images,
+  productName,
+  autoRotate = true,
+  rotateIntervalMs = 5500,
+}) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [isHovered, setIsHovered] = useState(false);
+  // Once the customer interacts manually, automatic rotation stops for this mount.
+  const interactedRef = useRef(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReducedMotion(query.matches);
+    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    setActiveIndex(0);
+    interactedRef.current = false;
+  }, [images]);
+
+  const goTo = (index: number) => {
+    interactedRef.current = true;
+    setActiveIndex(((index % images.length) + images.length) % images.length);
+  };
+
+  useEffect(() => {
+    if (!autoRotate || reducedMotion || isHovered || images.length < 2) return;
+    if (interactedRef.current) return;
+    const timer = setTimeout(() => {
+      setActiveIndex((prev) => (prev + 1) % images.length);
+    }, rotateIntervalMs);
+    return () => clearTimeout(timer);
+  }, [autoRotate, reducedMotion, isHovered, images, rotateIntervalMs, activeIndex]);
 
   const activeImage = images[activeIndex] || images[0];
 
   const handleNext = (e?: React.MouseEvent) => {
     e?.stopPropagation();
+    interactedRef.current = true;
     setActiveIndex((prev) => (prev + 1) % images.length);
   };
 
   const handlePrev = (e?: React.MouseEvent) => {
     e?.stopPropagation();
+    interactedRef.current = true;
     setActiveIndex((prev) => (prev - 1 + images.length) % images.length);
   };
 
   const openLightbox = () => {
+    interactedRef.current = true;
     setLightboxZoom(1);
     setIsLightboxOpen(true);
   };
@@ -36,12 +77,20 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productN
   return (
     <div className="flex flex-col gap-4">
       {/* Primary Image Container */}
-      <div className="relative w-full aspect-[4/5] bg-[#F2EDE2] rounded-xs overflow-hidden group cursor-zoom-in">
+      <div
+        className="relative w-full aspect-[4/5] bg-[#F2EDE2] rounded-xs overflow-hidden group cursor-zoom-in"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onFocus={() => setIsHovered(true)}
+        onBlur={() => setIsHovered(false)}
+      >
         <img
+          key={activeIndex}
           src={activeImage}
           alt={`${productName} view ${activeIndex + 1}`}
           onClick={openLightbox}
-          className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+          loading="eager"
+          className="gallery-fade w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
         />
 
         {/* Lightbox Expand Icon */}
@@ -89,16 +138,18 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productN
         <div className="grid grid-cols-4 sm:grid-cols-5 gap-2.5">
           {images.map((img, idx) => (
             <button
-              key={img}
+              key={`${img}-${idx}`}
               type="button"
-              onClick={() => setActiveIndex(idx)}
-              className={`aspect-[4/5] rounded-xs overflow-hidden border bg-[#F2EDE2] transition-all ${
+              onClick={() => goTo(idx)}
+              aria-pressed={activeIndex === idx}
+              aria-label={`View image ${idx + 1} of ${images.length}`}
+              className={`aspect-[4/5] rounded-xs overflow-hidden border-2 bg-[#F2EDE2] transition-opacity focus-visible:outline-2 focus-visible:outline-[#1F5742] ${
                 activeIndex === idx
                   ? 'border-[#1F5742] ring-2 ring-[#1F5742] opacity-100'
                   : 'border-[#E7E3DA] opacity-70 hover:opacity-100'
               }`}
             >
-              <img src={img} alt="" className="w-full h-full object-cover" />
+              <img src={img} alt="" loading="lazy" className="w-full h-full object-cover" />
             </button>
           ))}
         </div>

@@ -130,10 +130,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                   e.stopPropagation();
                   setSelectedColor(color);
                 }}
-                className={`w-3 h-3 rounded-full border transition-transform ${
+                className={`w-3 h-3 rounded-full border transition-colors ${
                   selectedColor?.name === color.name
-                    ? 'scale-125 border-[#1F5742] ring-1 ring-[#1F5742]'
-                    : 'border-[#E7E3DA]/50 hover:scale-110'
+                    ? 'border-[#1F5742] ring-1 ring-[#1F5742]'
+                    : 'border-[#E7E3DA]/50'
                 }`}
                 style={{ backgroundColor: color.hex }}
               />

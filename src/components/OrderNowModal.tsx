@@ -8,7 +8,7 @@ import { OrderService } from '../services/orderService';
 import { Order } from '../types';
 
 export const OrderNowModal: React.FC = () => {
-  const { orderNowModal, closeOrderNow, cart, clearCart, navigate, showToast, language, t } = useShop();
+  const { orderNowModal, closeOrderNow, cart, clearCart, navigate, showToast, language, t, codEnabled } = useShop();
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -77,6 +77,15 @@ export const OrderNowModal: React.FC = () => {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+
+    if (!codEnabled) {
+      setErrorMessage(
+        language === 'fr'
+          ? 'Les commandes sont temporairement désactivées.'
+          : 'Ordering is temporarily disabled.'
+      );
+      return;
+    }
 
     // Validation messages localized
     if (!fullName.trim()) {
@@ -570,8 +579,15 @@ export const OrderNowModal: React.FC = () => {
               <div className="pt-2 flex flex-col sm:flex-row gap-3">
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 py-3.5 px-6 bg-[#1F5742] hover:bg-[#164030] text-white text-xs font-semibold tracking-[0.15em] uppercase rounded shadow-sm transition-transform active:scale-98 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                  disabled={isSubmitting || !codEnabled}
+                  title={
+                    !codEnabled
+                      ? language === 'fr'
+                        ? 'Commandes désactivées'
+                        : 'Ordering disabled'
+                      : undefined
+                  }
+                  className="flex-1 py-3.5 px-6 bg-[#1F5742] hover:bg-[#164030] text-white text-xs font-semibold tracking-[0.15em] uppercase rounded shadow-sm transition-transform active:scale-98 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isSubmitting ? (
                     <span>{t('submittingOrder')}</span>

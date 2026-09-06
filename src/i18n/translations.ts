@@ -348,7 +348,8 @@ export const TRANSLATIONS = {
 };
 
 /**
- * Detects browser language: returns 'fr' if browser begins with 'fr', otherwise 'en'
+ * Language resolution: stored preference first, then browser language,
+ * defaulting to French for anything unsupported (Algeria-first default).
  */
 export function detectBrowserLanguage(): Language {
   if (typeof window === 'undefined') return 'fr'; // default to French in Algeria
@@ -357,7 +358,9 @@ export function detectBrowserLanguage(): Language {
     if (saved === 'fr' || saved === 'en') return saved;
 
     const browser = (navigator.language || (navigator as any).userLanguage || '').toLowerCase();
-    return browser.startsWith('fr') ? 'fr' : 'en';
+    if (browser.startsWith('fr')) return 'fr';
+    if (browser.startsWith('en')) return 'en';
+    return 'fr';
   } catch {
     return 'fr';
   }

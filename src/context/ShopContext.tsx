@@ -56,6 +56,7 @@ interface ShopContextType {
   setProducts: (prods: Product[]) => void;
   isProductsLoading: boolean;
   error: string | null;
+  codEnabled: boolean;
 }
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
@@ -109,6 +110,17 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [products, setProducts] = useState<Product[]>([]);
   const [isProductsLoading, setIsProductsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Store settings (COD toggle enforced at checkout; fail-open preserves current behavior)
+  const [codEnabled, setCodEnabled] = useState(true);
+  useEffect(() => {
+    fetch('/admin/api/settings', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && typeof data.codEnabled === 'boolean') setCodEnabled(data.codEnabled);
+      })
+      .catch(() => {});
+  }, []);
 
   // Fetch products from CMS when component mounts or the language changes
   // (product names/descriptions/tags are stored in both English and French)
@@ -289,6 +301,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProducts,
         isProductsLoading,
         error,
+        codEnabled,
       }}
     >
       {children}

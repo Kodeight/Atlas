@@ -618,6 +618,18 @@ function mapAdminProductToStorefront(adminProd: any, lang: StoreLanguage = 'en')
     .replace(/[\s]+/g, '-')
     .replace(/-+/g, '-')
     .trim();
+  // Relations (colors / sizes / gallery images) when the CMS provides them,
+  // otherwise the legacy single-value fallbacks keep old products working.
+  const relColors: any[] = Array.isArray(adminProd.colors) ? adminProd.colors : [];
+  const relSizes: any[] = Array.isArray(adminProd.sizes) ? adminProd.sizes : [];
+  const relImages: any[] = Array.isArray(adminProd.images) ? adminProd.images : [];
+  const galleryEnabled = adminProd.galleryEnabled === true && relImages.length > 0;
+  const galleryUrls = relImages.map((g) => g.url).filter((u) => typeof u === 'string' && u.length > 0);
+  const allImages = galleryEnabled ? [image, ...galleryUrls].filter(Boolean) : undefined;
+  const colorNameById = new Map<string, string>();
+  for (const c of relColors) {
+    if (c && c.id) colorNameById.set(c.id, pickLang(c.name, c.nameFr, lang) || c.name);
+  }
   let category: Product['category'] = 'women';
   const nameLower = name.toLowerCase();
   if (/blazer|jacket|coat|outerwear/i.test(nameLower)) category = 'tops';
@@ -629,7 +641,17 @@ function mapAdminProductToStorefront(adminProd: any, lang: StoreLanguage = 'en')
   else if (/new|arrival|latest/i.test(nameLower)) category = 'new-arrivals';
   else if (/sale|discount|promo/i.test(nameLower)) category = 'sale';
   let colors: { name: string; hex: string; imageIndex?: number }[] = [];
-  if (color) {
+  if (relColors.length > 0) {
+    colors = relColors.map((c) => {
+      const entry: { name: string; hex: string; imageIndex?: number } = {
+        name: pickLang(c.name, c.nameFr, lang) || c.name,
+        hex: typeof c.hex === 'string' && c.hex ? c.hex : '#1F5742',
+      };
+      const galleryIdx = relImages.findIndex((g) => g.colorId && g.colorId === c.id);
+      if (galleryEnabled && galleryIdx >= 0) entry.imageIndex = 1 + galleryIdx;
+      return entry;
+    });
+  } else if (color) {
     const colorName = color.replace('hsl(', '').replace(')', '').split(',')[0] || 'Default';
     colors = [{ name: colorName, hex: '#1F5742', imageIndex: 0 }];
   } else if (displayFlavor) {
@@ -637,6 +659,24 @@ function mapAdminProductToStorefront(adminProd: any, lang: StoreLanguage = 'en')
   } else {
     colors = [{ name: 'Default', hex: '#1F5742', imageIndex: 0 }];
   }
+  const enabledSizes = relSizes.filter((s) => s && s.enabled !== false && typeof s.label === 'string');
+  const sizes = relSizes.length > 0 ? enabledSizes.map((s) => s.label) : ['S', 'M', 'L'];
+  const sizeOptions =
+    relSizes.length > 0
+      ? relSizes.map((s) => ({
+          size: s.label,
+          inStock: s.enabled !== false && (s.stock == null || s.stock > 0),
+          stockCount: typeof s.stock === 'number' ? s.stock : undefined,
+        }))
+      : undefined;
+  const gallery =
+    galleryEnabled
+      ? relImages.map((g) => ({
+          url: g.url,
+          alt: typeof g.alt === 'string' ? g.alt : undefined,
+          colorName: g.colorId ? colorNameById.get(g.colorId) : undefined,
+        }))
+      : undefined;
   const primaryImage = image ? image : '/placeholder-product.webp';
   return {
     id,
@@ -644,12 +684,15 @@ function mapAdminProductToStorefront(adminProd: any, lang: StoreLanguage = 'en')
     slug,
     description: displayDescription,
     shortDescription: displayDescription ? displayDescription.split('.')[0] + '.' : displayName,
+    galleryEnabled,
+    gallery,
     category,
     categoryLabel: category,
     price,
     salePrice: undefined,
-    images: [primaryImage],
-    sizes: ['S', 'M', 'L'],
+    images: allImages && allImages.length > 0 ? allImages : [primaryImage],
+    sizes: sizes.length > 0 ? sizes : ['S', 'M', 'L'],
+    sizeOptions,
     colors,
     stock,
     sku: `ATL-${id.split('-')[1] || id}`,

@@ -71,6 +71,28 @@ try {
       update: async ({ where, data }: any) => { const c = store.companies.get(where.id); if (c) Object.assign(c, data); return c; },
       delete: async ({ where }: any) => { store.companies.delete(where.id); },
     },
+    $transaction: async (cb: any) => cb(prisma),
+    productColor: {
+      deleteMany: async () => ({ count: 0 }),
+      create: async ({ data }: any) => ({ ...data, id: `c-${Date.now()}` }),
+      findUnique: async () => null,
+    },
+    productSize: {
+      deleteMany: async () => ({ count: 0 }),
+      create: async ({ data }: any) => ({ ...data, id: `s-${Date.now()}` }),
+    },
+    productImage: {
+      deleteMany: async () => ({ count: 0 }),
+      create: async ({ data }: any) => ({ ...data, id: `g-${Date.now()}`, createdAt: new Date() }),
+    },
+    storeSettings: {
+      _row: null as any,
+      findUnique: async function (this: any) { return this._row; },
+      upsert: async function (this: any, { create, update }: any) {
+        this._row = { ...(this._row || { id: 'default' }), ...create, ...update };
+        return this._row;
+      },
+    },
     order: {
       create: async ({ data, include }: any) => {
         const id = `order-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -167,15 +189,110 @@ function defaultProductTheme(name: string) {
   return { color: "hsl(210, 20%, 35%)", bgGradient: "from-slate-50 to-slate-200" };
 }
 
+const colorInputSchema = z.object({
+  key: z.string().max(80).optional(),
+  name: z.string().min(1).max(80),
+  nameFr: z.string().max(80).optional(),
+  hex: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Hex must look like #1F5742."),
+  label: z.string().max(40).optional(),
+});
+
+const sizeInputSchema = z.object({
+  key: z.string().max(80).optional(),
+  label: z.string().min(1).max(10),
+  enabled: z.boolean().optional(),
+  stock: z.number().int().nonnegative().nullable().optional(),
+});
+
+const imageInputSchema = z.object({
+  key: z.string().max(80).optional(),
+  url: z.string().min(1).max(2000),
+  alt: z.string().max(200).optional(),
+  colorKey: z.string().max(80).optional(),
+});
+
 function normalizeProductData(data: z.infer<typeof productSchema>) {
   const theme = defaultProductTheme(data.name);
+  const { colors, sizes, images, ...scalars } = data as Record<string, unknown>;
   return {
-    ...data,
-    flavor: data.flavor || deriveFlavor(data.name),
-    color: data.color || theme.color,
-    bgGradient: data.bgGradient || theme.bgGradient,
+    ...scalars,
+    flavor: (scalars.flavor as string) || deriveFlavor(data.name),
+    color: (scalars.color as string) || theme.color,
+    bgGradient: (scalars.bgGradient as string) || theme.bgGradient,
   };
 }
+
+type VariantPayload = {
+  colors?: z.infer<typeof colorInputSchema>[];
+  sizes?: z.infer<typeof sizeInputSchema>[];
+  images?: z.infer<typeof imageInputSchema>[];
+};
+
+// Replaces a product's colors/sizes/images sets transactionally.
+// Only called for arrays the client actually sent; absent arrays are left untouched
+// so older clients (e.g. the one-time import script) keep working unchanged.
+async function saveProductRelations(productId: string, payload: VariantPayload) {
+  await prisma.$transaction(async (tx) => {
+    const colorIdByKey = new Map<string, string>();
+    if (payload.colors) {
+      await tx.productColor.deleteMany({ where: { productId } });
+      for (let i = 0; i < payload.colors.length; i++) {
+        const c = payload.colors[i];
+        const created = await tx.productColor.create({
+          data: {
+            productId,
+            name: c.name,
+            nameFr: c.nameFr || null,
+            hex: c.hex,
+            label: c.label || null,
+            position: i,
+          },
+        });
+        if (c.key) colorIdByKey.set(c.key, created.id);
+      }
+    }
+    if (payload.sizes) {
+      await tx.productSize.deleteMany({ where: { productId } });
+      for (let i = 0; i < payload.sizes.length; i++) {
+        const s = payload.sizes[i];
+        await tx.productSize.create({
+          data: {
+            productId,
+            label: s.label,
+            enabled: s.enabled ?? true,
+            stock: s.stock ?? null,
+            position: i,
+          },
+        });
+      }
+    }
+    if (payload.images) {
+      await tx.productImage.deleteMany({ where: { productId } });
+      for (let i = 0; i < payload.images.length; i++) {
+        const g = payload.images[i];
+        let colorId: string | null = null;
+        if (g.colorKey) {
+          if (colorIdByKey.has(g.colorKey)) {
+            colorId = colorIdByKey.get(g.colorKey)!;
+          } else {
+            // Reference to a pre-existing color (colors list untouched by this save)
+            const existing = await tx.productColor.findUnique({ where: { id: g.colorKey } });
+            if (existing && existing.productId === productId) colorId = existing.id;
+          }
+        }
+        await tx.productImage.create({
+          data: { productId, url: g.url, alt: g.alt || null, position: i, colorId },
+        });
+      }
+    }
+  });
+}
+
+const productRelationsInclude = {
+  colors: { orderBy: { position: "asc" as const } },
+  sizes: { orderBy: { position: "asc" as const } },
+  images: { orderBy: { position: "asc" as const } },
+};
 
 function isValidImagePath(value: string) {
   if (value.startsWith("/") || value.startsWith("./") || value.startsWith("../")) return true;
@@ -218,6 +335,10 @@ const productSchema = z.object({
   stock: z.number().int().nonnegative(),
   color: z.string().optional(),
   bgGradient: z.string().optional(),
+  galleryEnabled: z.boolean().optional(),
+  colors: z.array(colorInputSchema).max(40).optional(),
+  sizes: z.array(sizeInputSchema).max(30).optional(),
+  images: z.array(imageInputSchema).max(30).optional(),
 });
 
 const orderSchema = z.object({
@@ -253,6 +374,27 @@ const companySchema = z.object({
   name: z.string().min(2).max(100),
   active: z.boolean().optional(),
 });
+
+const settingsSchema = z
+  .object({
+    storeName: z.string().min(2).max(120).optional(),
+    logo: z.string().max(2000).optional(),
+    favicon: z.string().max(2000).optional(),
+    description: z.string().max(1000).optional(),
+    contactEmail: z.string().email().max(120).optional().or(z.literal("")),
+    phone: z.string().max(30).optional(),
+    address: z.string().max(500).optional(),
+    currency: z.string().min(1).max(10).optional(),
+    currencySymbol: z.string().min(1).max(10).optional(),
+    defaultCountry: z.string().min(2).max(80).optional(),
+    defaultLanguage: z.enum(["fr", "en"]).optional(),
+    deliveryEnabled: z.boolean().optional(),
+    defaultDeliveryFee: z.number().int().nonnegative().optional(),
+    freeDeliveryThreshold: z.number().int().nonnegative().nullable().optional(),
+    codEnabled: z.boolean().optional(),
+    defaultOrderStatus: z.enum(["pending", "processing", "delivered"]).optional(),
+  })
+  .refine((d) => Object.keys(d).length > 0, { message: "Nothing to update." });
 
 export type ProductAdmin = z.infer<typeof productSchema> & { id: string };
 export type OrderStatus = "pending" | "processing" | "delivered";
@@ -448,7 +590,10 @@ export function createAdminRouter() {
   });
 
   router.get("/products", async (_req: Request, res: Response) => {
-    const products = await prisma.product.findMany({ orderBy: { createdAt: "desc" } });
+    const products = await prisma.product.findMany({
+      orderBy: { createdAt: "desc" },
+      include: productRelationsInclude,
+    });
     return res.json(products);
   });
 
@@ -458,7 +603,7 @@ export function createAdminRouter() {
       return res.status(400).json({ message: "Product id is required." });
     }
 
-    const product = await prisma.product.findUnique({ where: { id: productId } });
+    const product = await prisma.product.findUnique({ where: { id: productId }, include: productRelationsInclude });
     if (!product) {
       return res.status(404).json({ message: "Product not found." });
     }
@@ -521,6 +666,11 @@ export function createAdminRouter() {
   router.get("/companies", async (_req: Request, res: Response) => {
     const companies = await prisma.shippingCompany.findMany({ orderBy: { createdAt: "asc" } });
     return res.json(companies);
+  });
+
+  router.get("/settings", async (_req: Request, res: Response) => {
+    const settings = await prisma.storeSettings.findUnique({ where: { id: "default" } });
+    return res.json(settings ?? defaultSettings());
   });
 
   router.use((req: Request, res: Response, next: NextFunction) => {
@@ -642,8 +792,10 @@ export function createAdminRouter() {
         ...normalizeProductData(parsed.data),
       },
     });
+    await saveProductRelations(id, parsed.data);
 
-    return res.status(201).json(newProduct);
+    const withRelations = await prisma.product.findUnique({ where: { id }, include: productRelationsInclude });
+    return res.status(201).json(withRelations ?? newProduct);
   });
 
   router.put("/products/:id", async (req: Request, res: Response) => {
@@ -666,7 +818,12 @@ export function createAdminRouter() {
       where: { id: productId },
       data: normalizeProductData(parsed.data),
     });
-    return res.json(updatedProduct);
+    await saveProductRelations(productId, parsed.data);
+    const withRelations = await prisma.product.findUnique({
+      where: { id: productId },
+      include: productRelationsInclude,
+    });
+    return res.json(withRelations ?? updatedProduct);
   });
 
   router.delete("/products/:id", async (req: Request, res: Response) => {
@@ -791,6 +948,47 @@ export function createAdminRouter() {
     }
     await prisma.shippingCompany.delete({ where: { id: companyId } });
     return res.json({ success: true });
+  });
+
+  function defaultSettings() {
+    return {
+      id: "default",
+      storeName: "Atlas",
+      logo: null,
+      favicon: null,
+      description: null,
+      contactEmail: null,
+      phone: null,
+      address: null,
+      currency: "DZD",
+      currencySymbol: "DA",
+      defaultCountry: "Algeria",
+      defaultLanguage: "fr",
+      deliveryEnabled: true,
+      defaultDeliveryFee: 0,
+      freeDeliveryThreshold: null,
+      codEnabled: true,
+      defaultOrderStatus: "pending",
+    };
+  }
+
+  router.put("/settings", async (req: Request, res: Response) => {
+    const parsed = settingsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: parsed.error.errors[0].message });
+    }
+    // Normalize blank optional text fields to null
+    for (const key of ["logo", "favicon", "description", "contactEmail", "phone", "address"] as const) {
+      if ((parsed.data as Record<string, unknown>)[key] === "") {
+        (parsed.data as Record<string, unknown>)[key] = null;
+      }
+    }
+    const updated = await prisma.storeSettings.upsert({
+      where: { id: "default" },
+      create: { id: "default", ...parsed.data },
+      update: parsed.data,
+    });
+    return res.json(updated);
   });
 
   return router;

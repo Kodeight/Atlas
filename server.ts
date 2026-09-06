@@ -19,15 +19,44 @@ try {
   };
 }
 
+const REL_INCLUDE = {
+  colors: { orderBy: { position: 'asc' as const } },
+  sizes: { orderBy: { position: 'asc' as const } },
+  images: { orderBy: { position: 'asc' as const } },
+};
+
 function mapDbProductToStorefront(dbProduct: any) {
   // DB product has: id, name, description, price, image, stock, color, bgGradient, flavor
-  // Map to storefront Product format
+  // plus optional relations (colors / sizes / images) and galleryEnabled.
+  // Legacy single-value fallbacks keep products without relations working.
   const slug = dbProduct.name
     .toLowerCase()
     .replace(/[^\w\s-]/g, '')
     .replace(/[\s]+/g, '-')
     .replace(/-+/g, '-')
     .trim();
+  const relColors: any[] = Array.isArray(dbProduct.colors) ? dbProduct.colors : [];
+  const relSizes: any[] = Array.isArray(dbProduct.sizes) ? dbProduct.sizes : [];
+  const relImages: any[] = Array.isArray(dbProduct.images) ? dbProduct.images : [];
+  const galleryEnabled = dbProduct.galleryEnabled === true && relImages.length > 0;
+  const galleryUrls = relImages.map((g: any) => g.url).filter((u: any) => typeof u === 'string' && u.length > 0);
+  const colorNameById = new Map<string, string>();
+  for (const c of relColors) {
+    if (c && c.id) colorNameById.set(c.id, c.name);
+  }
+  const colors =
+    relColors.length > 0
+      ? relColors.map((c: any) => {
+          const entry: { name: string; hex: string; imageIndex?: number } = {
+            name: c.name,
+            hex: typeof c.hex === 'string' && c.hex ? c.hex : '#1F5742',
+          };
+          const galleryIdx = relImages.findIndex((g: any) => g.colorId && g.colorId === c.id);
+          if (galleryEnabled && galleryIdx >= 0) entry.imageIndex = 1 + galleryIdx;
+          return entry;
+        })
+      : [{ name: dbProduct.flavor || 'Default', hex: dbProduct.color || '#1F5742', imageIndex: 0 }];
+  const enabledSizes = relSizes.filter((s: any) => s && s.enabled !== false && typeof s.label === 'string');
   return {
     id: dbProduct.id,
     name: dbProduct.name,
@@ -38,9 +67,25 @@ function mapDbProductToStorefront(dbProduct: any) {
     categoryLabel: 'Women',
     price: dbProduct.price,
     salePrice: undefined,
-    images: [dbProduct.image],
-    sizes: ['S', 'M', 'L'],
-    colors: [{ name: dbProduct.flavor || 'Default', hex: dbProduct.color || '#1F5742', imageIndex: 0 }],
+    images: galleryEnabled && galleryUrls.length > 0 ? [dbProduct.image, ...galleryUrls].filter(Boolean) : [dbProduct.image],
+    galleryEnabled,
+    gallery: galleryEnabled
+      ? relImages.map((g: any) => ({
+          url: g.url,
+          alt: typeof g.alt === 'string' ? g.alt : undefined,
+          colorName: g.colorId ? colorNameById.get(g.colorId) : undefined,
+        }))
+      : undefined,
+    sizes: enabledSizes.length > 0 || relSizes.length > 0 ? enabledSizes.map((s: any) => s.label) : ['S', 'M', 'L'],
+    sizeOptions:
+      relSizes.length > 0
+        ? relSizes.map((s: any) => ({
+            size: s.label,
+            inStock: s.enabled !== false && (s.stock == null || s.stock > 0),
+            stockCount: typeof s.stock === 'number' ? s.stock : undefined,
+          }))
+        : undefined,
+    colors,
     stock: dbProduct.stock,
     sku: `ATL-${dbProduct.id}`,
     isSale: false,
@@ -53,7 +98,7 @@ function mapDbProductToStorefront(dbProduct: any) {
 
 async function getProductsFromDbOrFallback() {
   try {
-    const dbProducts = await prisma.product.findMany({ orderBy: { createdAt: 'desc' } });
+    const dbProducts = await prisma.product.findMany({ orderBy: { createdAt: 'desc' }, include: REL_INCLUDE });
     if (dbProducts.length > 0) {
       return dbProducts.map(mapDbProductToStorefront);
     }

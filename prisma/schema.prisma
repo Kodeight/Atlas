@@ -16,19 +16,78 @@ model AdminUser {
 }
 
 model Product {
-  id            String   @id
-  name          String
-  nameFr        String?
-  flavor        String?
-  flavorFr      String?
-  description   String
-  descriptionFr String?
-  price         Float
-  image         String
-  stock         Int
-  color         String?
-  bgGradient    String?
-  createdAt     DateTime @default(now())
+  id             String         @id
+  name           String
+  nameFr         String?
+  flavor         String?
+  flavorFr       String?
+  description    String
+  descriptionFr  String?
+  price          Float
+  image          String
+  stock          Int
+  color          String?
+  bgGradient     String?
+  galleryEnabled Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  colors         ProductColor[]
+  sizes          ProductSize[]
+  images         ProductImage[]
+}
+
+model ProductColor {
+  id        String         @id @default(cuid())
+  productId String
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String
+  nameFr    String?
+  hex       String         @default("#1F5742")
+  label     String?
+  position  Int            @default(0)
+  images    ProductImage[]
+}
+
+model ProductSize {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label     String
+  enabled   Boolean @default(true)
+  stock     Int?
+  position  Int     @default(0)
+}
+
+model ProductImage {
+  id        String        @id @default(cuid())
+  productId String
+  product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  position  Int           @default(0)
+  colorId   String?
+  color     ProductColor? @relation(fields: [colorId], references: [id], onDelete: SetNull)
+  createdAt DateTime      @default(now())
+}
+
+model StoreSettings {
+  id                    String   @id @default("default")
+  storeName             String   @default("Atlas")
+  logo                  String?
+  favicon               String?
+  description           String?
+  contactEmail          String?
+  phone                 String?
+  address               String?
+  currency              String   @default("DZD")
+  currencySymbol        String   @default("DA")
+  defaultCountry        String   @default("Algeria")
+  defaultLanguage       String   @default("fr")
+  deliveryEnabled       Boolean  @default(true)
+  defaultDeliveryFee    Int      @default(0)
+  freeDeliveryThreshold Int?
+  codEnabled            Boolean  @default(true)
+  defaultOrderStatus    String   @default("pending")
+  updatedAt             DateTime @updatedAt
 }
 
 model Order {

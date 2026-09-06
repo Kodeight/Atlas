@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useShop } from '../context/ShopContext';
 import { getProductBySlug, getRelatedProducts, PRODUCTS_DATA } from '../data/products';
 import { ProductGallery } from '../components/ProductGallery';
@@ -53,6 +53,25 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
   }, [product]);
 
   const relatedProducts = getRelatedProducts(product.id, product.category, 4);
+
+  // Gallery images follow the selected color: when the gallery has images
+  // associated with the chosen color, those become the visible set (first =
+  // main). Otherwise the full gallery (or single image) is shown unchanged.
+  const visibleImages = useMemo(() => {
+    if (product.galleryEnabled && product.gallery && product.gallery.length > 0) {
+      const matches = selectedColor
+        ? product.gallery.filter((g) => g.colorName && g.colorName === selectedColor.name)
+        : [];
+      if (matches.length > 0) return matches.map((g) => g.url);
+      return product.images;
+    }
+    return product.images;
+  }, [product, selectedColor]);
+
+  const selectedSizeOption = useMemo(() => {
+    if (!product.sizeOptions) return undefined;
+    return product.sizeOptions.find((o) => o.size === selectedSize);
+  }, [product, selectedSize]);
 
   const handleAddToCart = () => {
     if (!selectedSize) {
@@ -110,7 +129,11 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
           {/* Gallery Column */}
           <div className="lg:col-span-7">
             <AnimatedReveal animation="clip-curtain" delay={0.1}>
-              <ProductGallery images={product.images} productName={product.name} />
+              <ProductGallery
+                key={`${product.id}-${selectedColor?.name ?? 'default'}`}
+                images={visibleImages.length > 0 ? visibleImages : product.images}
+                productName={product.name}
+              />
             </AnimatedReveal>
           </div>
 
@@ -182,10 +205,9 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
                           key={color.name}
                           type="button"
                           onClick={() => setSelectedColor(color)}
-                          className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
-                            isSelected
-                              ? 'ring-2 ring-[#1F5742] border-white scale-110'
-                              : 'border-black/20 hover:scale-105'
+                          aria-pressed={isSelected}
+                          className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-[#1F5742] ${
+                            isSelected ? 'ring-2 ring-[#1F5742] ring-offset-2 ring-offset-[#FCFBF7] border-white' : 'border-black/20'
                           }`}
                           style={{ backgroundColor: color.hex }}
                           aria-label={`Select ${color.name}`}
@@ -243,6 +265,15 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
                     {language === 'fr' ? 'Veuillez sélectionner une taille.' : 'Please select a size to proceed.'}
                   </p>
                 )}
+                {selectedSizeOption &&
+                  typeof selectedSizeOption.stockCount === 'number' &&
+                  selectedSizeOption.stockCount <= 5 && (
+                    <p className="text-xs font-medium text-[#1F5742] font-sans-ui">
+                      {language === 'fr'
+                        ? `Plus que ${selectedSizeOption.stockCount} en taille ${selectedSize}`
+                        : `Only ${selectedSizeOption.stockCount} left in size ${selectedSize}`}
+                    </p>
+                  )}
               </div>
 
               {/* Quantity Selector */}
