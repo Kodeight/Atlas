@@ -8,3 +8,4 @@ coverage/
 !.env.example
 *task.txt
 task.md
+.vercel

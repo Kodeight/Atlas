@@ -82,7 +82,7 @@ const LoginPage: React.FC = () => {
             className="w-12 h-12 object-contain mb-3"
             loading="eager"
           />
-          <h2 className="text-2xl font-bold text-[#1F5742] text-center">
+          <h2 className="text-2xl font-bold text-[#1F5742] text-center font-sans-ui">
             {language === 'fr' ? 'Connexion Admin' : 'Admin Login'}
           </h2>
           <p className="text-sm text-[#6D6D6D] mt-2 text-center">

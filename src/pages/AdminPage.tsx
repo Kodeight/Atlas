@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useShop } from '../context/ShopContext';
 import { AtlasLogo } from '../components/BrandElements';
-import { LogOut, Package, ShoppingCart, Users, LayoutDashboard, Settings } from 'lucide-react';
+import { LogOut, Menu, Package, ShoppingCart, Users, LayoutDashboard, Settings, X } from 'lucide-react';
 
 interface AdminUser {
   id: string;
@@ -17,6 +17,7 @@ const AdminPage: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'orders'>('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -72,31 +73,61 @@ const AdminPage: React.FC = () => {
     { id: 'settings', label: 'Settings', icon: Settings },
   ] as const;
 
+  useEffect(() => {
+    // Lock body scroll while the mobile drawer is open
+    document.body.style.overflow = sidebarOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [sidebarOpen]);
+
   return (
     <div className="min-h-screen flex bg-[#F7F3EA] font-sans-ui">
-      {/* Sidebar - Atlas Green #1F5742 with 25px radius on right */}
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      {/* Sidebar - Atlas Green #1F5742 with 25px radius on right; drawer on mobile */}
       <aside
-        className="w-64 shrink-0 bg-[#1F5742] text-white flex flex-col"
+        className={`fixed inset-y-0 left-0 z-40 w-64 max-w-[85vw] shrink-0 bg-[#1F5742] text-white flex flex-col transition-transform duration-300 md:static md:z-auto md:max-w-none md:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
         style={{
           borderTopRightRadius: '25px',
           borderBottomRightRadius: '25px',
         }}
       >
         <div className="p-6 border-b border-white/10">
-          <AtlasLogo className="h-8 w-auto brightness-0 invert" />
+          <div className="flex items-center justify-between">
+            <AtlasLogo className="h-8 w-auto brightness-0 invert" />
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="md:hidden p-1.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white"
+              aria-label="Close menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
           <div className="mt-4 text-xs text-white/70">
             <div className="font-medium text-white">{user.name}</div>
             <div className="truncate">{user.email}</div>
           </div>
         </div>
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id as any)}
+                onClick={() => {
+                  setActiveTab(item.id as any);
+                  setSidebarOpen(false);
+                }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
@@ -126,11 +157,20 @@ const AdminPage: React.FC = () => {
 
       {/* Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-[#FCFBF7] border-b border-[#E7E3DA] px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-[#151515] font-sans-ui capitalize">{activeTab}</h1>
-          <div className="text-xs text-[#6D6D6D]">Atlas Admin • {new Date().toLocaleDateString()}</div>
+        <header className="bg-[#FCFBF7] border-b border-[#E7E3DA] px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden p-2 -ml-1 rounded-lg text-[#1F5742] hover:bg-[#F7F3EA]"
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <h1 className="text-lg font-semibold text-[#151515] font-sans-ui capitalize truncate">{activeTab}</h1>
+          </div>
+          <div className="text-xs text-[#6D6D6D] shrink-0">Atlas Admin • {new Date().toLocaleDateString()}</div>
         </header>
-        <main className="flex-1 p-6 bg-[#F7F3EA] overflow-auto">
+        <main className="flex-1 p-4 sm:p-6 bg-[#F7F3EA] overflow-auto">
           {activeTab === 'dashboard' && (
             <div className="grid gap-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -153,7 +193,7 @@ const AdminPage: React.FC = () => {
                 </div>
               </div>
               <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
-                <h3 className="text-sm font-semibold text-[#151515] mb-3">Recent Orders</h3>
+                <h3 className="text-sm font-semibold text-[#151515] mb-3 font-sans-ui">Recent Orders</h3>
                 {orders.length === 0 ? (
                   <div className="text-sm text-[#6D6D6D]">No orders yet.</div>
                 ) : (
@@ -188,7 +228,7 @@ const AdminPage: React.FC = () => {
           {activeTab === 'products' && (
             <div className="bg-white rounded-lg border border-[#E7E3DA] overflow-hidden">
               <div className="px-5 py-4 border-b border-[#E7E3DA] flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Products ({products.length})</h3>
+                <h3 className="text-sm font-semibold font-sans-ui">Products ({products.length})</h3>
                 <span className="text-xs text-[#6D6D6D]">Managed via CMS • changes appear on storefront</span>
               </div>
               <div className="overflow-x-auto">
@@ -216,7 +256,7 @@ const AdminPage: React.FC = () => {
           {activeTab === 'orders' && (
             <div className="bg-white rounded-lg border border-[#E7E3DA] overflow-hidden">
               <div className="px-5 py-4 border-b border-[#E7E3DA]">
-                <h3 className="text-sm font-semibold">Orders ({orders.length})</h3>
+                <h3 className="text-sm font-semibold font-sans-ui">Orders ({orders.length})</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
