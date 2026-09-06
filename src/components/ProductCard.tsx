@@ -123,9 +123,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <div className="flex items-center gap-1.5 my-2.5">
             {product.colors.map((color) => (
               <button
-                key={color.name}
+                key={`${color.name}-${color.hex}`}
                 type="button"
-                aria-label={`Select ${color.name}`}
+                aria-label={color.displayName ? `Select ${color.displayName}` : `Color ${color.hex}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   setSelectedColor(color);

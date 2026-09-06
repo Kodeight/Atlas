@@ -193,16 +193,23 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
                 <div className="py-4 border-t border-[#E7E3DA] space-y-3">
                   <div className="flex justify-between items-center text-xs">
                     <span className="font-semibold text-[#151515] font-sans-ui">
-                      {language === 'fr' ? 'COULEUR :' : 'COLOR:'}{' '}
-                      <span className="font-normal text-[#6D6D6D]">{selectedColor?.name}</span>
+                      {language === 'fr' ? 'COULEUR' : 'COLOR'}
+                      {selectedColor?.displayName ? (
+                        <>
+                          : <span className="font-normal text-[#6D6D6D]">{selectedColor.displayName}</span>
+                        </>
+                      ) : (
+                        ''
+                      )}
                     </span>
                   </div>
                   <div className="flex items-center gap-2.5 py-1">
                     {product.colors.map((color) => {
                       const isSelected = selectedColor?.name === color.name;
+                      const colorLabel = color.displayName || `Color ${color.hex}`;
                       return (
                         <button
-                          key={color.name}
+                          key={`${color.name}-${color.hex}`}
                           type="button"
                           onClick={() => setSelectedColor(color)}
                           aria-pressed={isSelected}
@@ -210,7 +217,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
                             isSelected ? 'ring-2 ring-[#1F5742] ring-offset-2 ring-offset-[#FCFBF7] border-white' : 'border-black/20'
                           }`}
                           style={{ backgroundColor: color.hex }}
-                          aria-label={`Select ${color.name}`}
+                          aria-label={`Select ${colorLabel}`}
                         >
                           {isSelected && <Check className="w-3.5 h-3.5 text-white drop-shadow-sm" />}
                         </button>

@@ -45,8 +45,15 @@ async function adminApi(path: string, options: RequestInit = {}) {
     ...options,
   });
   const data = await res.json().catch(() => null);
+  if (res.status === 401) throw new Error('__SESSION_EXPIRED__');
   if (!res.ok) throw new Error((data && data.message) || `Request failed (${res.status}).`);
   return data;
+}
+
+function friendlyError(t: { sessionExpired: string }, e: unknown, fallback: string): string {
+  if (e instanceof Error && e.message === '__SESSION_EXPIRED__') return t.sessionExpired;
+  if (e instanceof Error) return e.message;
+  return fallback;
 }
 
 const AdminPage: React.FC = () => {
@@ -119,7 +126,7 @@ const AdminPage: React.FC = () => {
       setSettings(updated);
       showNotice('success', t.sSaved);
     } catch (e) {
-      showNotice('error', e instanceof Error ? e.message : t.sLoadError);
+      showNotice('error', friendlyError(t, e, t.sLoadError));
     } finally {
       setSavingSettings(false);
     }
@@ -144,7 +151,7 @@ const AdminPage: React.FC = () => {
       setEditingProduct(null);
       await reload();
     } catch (e) {
-      showNotice('error', e instanceof Error ? e.message : t.nErrSave);
+      showNotice('error', friendlyError(t, e, t.nErrSave));
     } finally {
       setSaving(false);
     }
@@ -157,7 +164,7 @@ const AdminPage: React.FC = () => {
       showNotice('success', t.nProdDeleted);
       await reload();
     } catch (e) {
-      showNotice('error', e instanceof Error ? e.message : t.nErrDelete);
+      showNotice('error', friendlyError(t, e, t.nErrDelete));
     }
   };
 
@@ -167,7 +174,7 @@ const AdminPage: React.FC = () => {
       showNotice('success', t.nOrderUpdated);
       await reload();
     } catch (e) {
-      showNotice('error', e instanceof Error ? e.message : t.nErrOrder);
+      showNotice('error', friendlyError(t, e, t.nErrOrder));
     }
   };
 
@@ -181,7 +188,7 @@ const AdminPage: React.FC = () => {
       showNotice('success', t.nCompanyAdded);
       await reload();
     } catch (err) {
-      showNotice('error', err instanceof Error ? err.message : t.nErrCompany);
+      showNotice('error', friendlyError(t, err, t.nErrCompany));
     }
   };
 
@@ -191,7 +198,7 @@ const AdminPage: React.FC = () => {
       showNotice('success', t.nCompanyUpdated);
       await reload();
     } catch (err) {
-      showNotice('error', err instanceof Error ? err.message : t.nErrCompany);
+      showNotice('error', friendlyError(t, err, t.nErrCompany));
     }
   };
 
@@ -201,7 +208,7 @@ const AdminPage: React.FC = () => {
       showNotice('success', t.nCompanyDeleted);
       await reload();
     } catch (err) {
-      showNotice('error', err instanceof Error ? err.message : t.nErrCompanyDelete);
+      showNotice('error', friendlyError(t, err, t.nErrCompanyDelete));
     }
   };
 
@@ -213,7 +220,7 @@ const AdminPage: React.FC = () => {
       showNotice('success', t.nAdminCreated);
       await reload();
     } catch (err) {
-      showNotice('error', err instanceof Error ? err.message : t.nErrUserCreate);
+      showNotice('error', friendlyError(t, err, t.nErrUserCreate));
     }
   };
 
@@ -223,7 +230,7 @@ const AdminPage: React.FC = () => {
       showNotice('success', t.nAdminDeleted);
       await reload();
     } catch (err) {
-      showNotice('error', err instanceof Error ? err.message : t.nErrUserDelete);
+      showNotice('error', friendlyError(t, err, t.nErrUserDelete));
     }
   };
 

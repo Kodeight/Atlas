@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useShop } from '../context/ShopContext';
-import { PRODUCTS_DATA } from '../data/products';
 import { formatCurrency } from '../services/shippingService';
 
 export const SearchModal: React.FC = () => {
-  const { isSearchOpen, setIsSearchOpen, navigate, language, t } = useShop();
+  const { isSearchOpen, setIsSearchOpen, navigate, language, t, products } = useShop();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -22,7 +21,7 @@ export const SearchModal: React.FC = () => {
 
   const trimmed = query.trim().toLowerCase();
   const results = trimmed
-    ? PRODUCTS_DATA.filter((p) => {
+    ? products.filter((p) => {
         return (
           p.name.toLowerCase().includes(trimmed) ||
           p.categoryLabel.toLowerCase().includes(trimmed) ||

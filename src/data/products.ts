@@ -628,7 +628,13 @@ function mapAdminProductToStorefront(adminProd: any, lang: StoreLanguage = 'en')
   const allImages = galleryEnabled ? [image, ...galleryUrls].filter(Boolean) : undefined;
   const colorNameById = new Map<string, string>();
   for (const c of relColors) {
-    if (c && c.id) colorNameById.set(c.id, pickLang(c.name, c.nameFr, lang) || c.name);
+    if (c && c.id) {
+      const raw = typeof c.name === 'string' && c.name.trim() ? c.name.trim() : null;
+      const rawFr = typeof c.nameFr === 'string' && c.nameFr.trim() ? c.nameFr.trim() : null;
+      const shown = lang === 'fr' ? rawFr || raw : raw || rawFr;
+      const hex = typeof c.hex === 'string' && c.hex ? c.hex : '#1F5742';
+      colorNameById.set(c.id, shown || hex);
+    }
   }
   let category: Product['category'] = 'women';
   const nameLower = name.toLowerCase();
@@ -640,12 +646,19 @@ function mapAdminProductToStorefront(adminProd: any, lang: StoreLanguage = 'en')
   else if (/accessory|bag|scarf|hijab|hat/i.test(nameLower)) category = 'accessories';
   else if (/new|arrival|latest/i.test(nameLower)) category = 'new-arrivals';
   else if (/sale|discount|promo/i.test(nameLower)) category = 'sale';
-  let colors: { name: string; hex: string; imageIndex?: number }[] = [];
+  let colors: { name: string; displayName: string | null; hex: string; imageIndex?: number }[] = [];
   if (relColors.length > 0) {
     colors = relColors.map((c) => {
-      const entry: { name: string; hex: string; imageIndex?: number } = {
-        name: pickLang(c.name, c.nameFr, lang) || c.name,
-        hex: typeof c.hex === 'string' && c.hex ? c.hex : '#1F5742',
+      const rawName = typeof c.name === 'string' && c.name.trim() ? c.name.trim() : null;
+      const rawNameFr = typeof c.nameFr === 'string' && c.nameFr.trim() ? c.nameFr.trim() : null;
+      const shown = lang === 'fr' ? rawNameFr || rawName : rawName || rawNameFr;
+      const hex = typeof c.hex === 'string' && c.hex ? c.hex : '#1F5742';
+      const entry: { name: string; displayName: string | null; hex: string; imageIndex?: number } = {
+        // name stays a non-empty identifier (falls back to hex); displayName is
+        // null when the admin gave no name, and the UI must not invent one.
+        name: shown || hex,
+        displayName: shown,
+        hex,
       };
       const galleryIdx = relImages.findIndex((g) => g.colorId && g.colorId === c.id);
       if (galleryEnabled && galleryIdx >= 0) entry.imageIndex = 1 + galleryIdx;
@@ -653,11 +666,11 @@ function mapAdminProductToStorefront(adminProd: any, lang: StoreLanguage = 'en')
     });
   } else if (color) {
     const colorName = color.replace('hsl(', '').replace(')', '').split(',')[0] || 'Default';
-    colors = [{ name: colorName, hex: '#1F5742', imageIndex: 0 }];
+    colors = [{ name: colorName, displayName: colorName, hex: '#1F5742', imageIndex: 0 }];
   } else if (displayFlavor) {
-    colors = [{ name: displayFlavor, hex: '#1F5742', imageIndex: 0 }];
+    colors = [{ name: displayFlavor, displayName: displayFlavor, hex: '#1F5742', imageIndex: 0 }];
   } else {
-    colors = [{ name: 'Default', hex: '#1F5742', imageIndex: 0 }];
+    colors = [{ name: 'Default', displayName: 'Default', hex: '#1F5742', imageIndex: 0 }];
   }
   const enabledSizes = relSizes.filter((s) => s && s.enabled !== false && typeof s.label === 'string');
   const sizes = relSizes.length > 0 ? enabledSizes.map((s) => s.label) : ['S', 'M', 'L'];
@@ -711,6 +724,10 @@ export function mapAdminProductsToStorefront(adminProds: any[], lang: StoreLangu
 }
 
 let cachedDbProducts: Product[] | null = null;
+// Timestamp of the last successful CMS fetch. Drives staleness-based
+// revalidation so SPA navigation picks up Admin edits without a hard refresh.
+let lastSuccessfulFetchAt = 0;
+let lastFetchWasFallback = false;
 
 export async function fetchProductsFromCMS(lang: StoreLanguage = 'en'): Promise<Product[]> {
   try {
@@ -719,12 +736,30 @@ export async function fetchProductsFromCMS(lang: StoreLanguage = 'en'): Promise<
     const adminProducts: any[] = await response.json();
     cmsProductsFetchAttempted = true;
     const mapped = mapAdminProductsToStorefront(adminProducts, lang);
-    if (mapped.length > 0) cachedDbProducts = mapped;
-    return mapped.length > 0 ? mapped : PRODUCTS_DATA;
+    if (mapped.length > 0) {
+      cachedDbProducts = mapped;
+      lastSuccessfulFetchAt = Date.now();
+      lastFetchWasFallback = false;
+      return mapped;
+    }
+    lastFetchWasFallback = true;
+    return PRODUCTS_DATA;
   } catch {
     cmsProductsFetchAttempted = true;
+    lastFetchWasFallback = true;
     return PRODUCTS_DATA;
   }
+}
+
+/** True when the last fetch fell back to static data instead of the database. */
+export function wasFallbackUsed(): boolean {
+  return lastFetchWasFallback;
+}
+
+/** True when cached catalog data is older than maxAgeMs (or was never fetched). */
+export function isCatalogStale(maxAgeMs: number): boolean {
+  if (!cachedDbProducts || cachedDbProducts.length === 0) return true;
+  return Date.now() - lastSuccessfulFetchAt > maxAgeMs;
 }
 
 export function hasFetchedFromCMS(): boolean {

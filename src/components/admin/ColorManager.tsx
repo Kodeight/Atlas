@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, GripVertical, Plus, Trash2 } from 'lucide-react';
 import { adminText, AdminLang } from './adminText';
 import { newTempKey } from './imageUpload';
+import { isValidHex, recognizeHex } from './colorNames';
+
+const DEFAULT_HEX = '#1F5742';
 
 export interface ColorRow {
   key: string;
@@ -32,7 +35,24 @@ export const ColorManager: React.FC<ColorManagerProps> = ({ colors, lang, onChan
   const [dragKey, setDragKey] = useState<string | null>(null);
 
   const update = (key: string, patch: Partial<ColorRow>) => {
-    onChange(colors.map((c) => (c.key === key ? { ...c, ...patch } : c)));
+    onChange(
+      colors.map((c) => {
+        if (c.key !== key) return c;
+        const next = { ...c, ...patch };
+        // Auto-recognize the hex code from the typed name (EN/FR) unless the
+        // admin already picked a custom color. The picker always wins.
+        if ((patch.name !== undefined || patch.nameFr !== undefined) && !patch.hex) {
+          const untouched = !isValidHex(c.hex) || c.hex.toLowerCase() === DEFAULT_HEX.toLowerCase();
+          if (untouched) {
+            const known =
+              recognizeHex(patch.name !== undefined ? patch.name : next.name) ??
+              recognizeHex(patch.nameFr !== undefined ? patch.nameFr : next.nameFr);
+            if (known) next.hex = known;
+          }
+        }
+        return next;
+      }),
+    );
   };
 
   const dropOn = (e: React.DragEvent, targetKey: string) => {
@@ -46,6 +66,7 @@ export const ColorManager: React.FC<ColorManagerProps> = ({ colors, lang, onChan
 
   return (
     <div className="space-y-3 font-sans-ui">
+      <p className="text-xs text-[#6D6D6D]">{t.colorAutoHint}</p>
       {colors.map((c, idx) => (
         <div
           key={c.key}

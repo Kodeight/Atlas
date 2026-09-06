@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { useShop } from '../context/ShopContext';
 import { ProductCard } from '../components/ProductCard';
 import { AnimatedReveal } from '../components/AnimatedReveal';
-import { PRODUCTS_DATA } from '../data/products';
 import { ProductCategory } from '../types';
 import { SlidersHorizontal, ArrowUpDown, X } from 'lucide-react';
 
@@ -11,7 +10,7 @@ interface ShopPageProps {
 }
 
 export const ShopPage: React.FC<ShopPageProps> = ({ initialCategory = 'all' }) => {
-  const { currentPath, navigate, language, t } = useShop();
+  const { currentPath, navigate, language, t, products } = useShop();
 
   // Determine active category from path or prop
   const currentCategory: ProductCategory = useMemo(() => {
@@ -47,7 +46,9 @@ export const ShopPage: React.FC<ShopPageProps> = ({ initialCategory = 'all' }) =
   ];
 
   const filteredProducts = useMemo(() => {
-    let list = [...PRODUCTS_DATA];
+    // Single source of truth: the CMS/database-backed catalog from context.
+    // Never the hardcoded static array — Admin edits must appear here.
+    let list = [...products];
 
     // Category filter
     if (selectedCategory !== 'all') {
@@ -83,7 +84,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({ initialCategory = 'all' }) =
     }
 
     return list;
-  }, [selectedCategory, sortBy, maxPrice, showOnlySale]);
+  }, [products, selectedCategory, sortBy, maxPrice, showOnlySale]);
 
   const handleCategoryClick = (cat: ProductCategory) => {
     setSelectedCategory(cat);

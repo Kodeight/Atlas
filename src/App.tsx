@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { ShopProvider, useShop } from './context/ShopContext';
 import { applyPageMeta, getPageTitle } from './pageMeta';
-import { getProductBySlug } from './data/products';
+import { getProductBySlug, isCatalogStale } from './data/products';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
@@ -24,13 +24,23 @@ import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
 
 const MainRouter: React.FC = () => {
-  const { currentPath, language, products } = useShop();
+  const { currentPath, language, products, refreshProducts } = useShop();
 
   // Scroll to top + keep the browser tab title (and product meta) in sync.
   // Re-runs when products load so async product data updates the title.
   // /admin* titles are owned by AdminPage (tab-aware) — getPageTitle returns null there.
+  // Staleness-based revalidation: navigating to a product surface with data older
+  // than 60s refetches from the database, so Admin edits appear without a hard refresh.
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    const isProductSurface =
+      currentPath === '/' ||
+      currentPath === '/shop' ||
+      currentPath.startsWith('/category/') ||
+      currentPath.startsWith('/product/');
+    if (isProductSurface && isCatalogStale(60_000)) {
+      refreshProducts();
+    }
     const title = getPageTitle(currentPath, language, (slug) => getProductBySlug(slug));
     let description: string | undefined;
     if (title !== null && currentPath.startsWith('/product/')) {
@@ -38,6 +48,8 @@ const MainRouter: React.FC = () => {
       description = slug ? getProductBySlug(slug)?.shortDescription : undefined;
     }
     applyPageMeta(title, description);
+    // Note: refreshProducts intentionally omitted from deps — its identity only
+    // changes with language, which already retriggers this effect.
   }, [currentPath, language, products]);
 
   // Route matching

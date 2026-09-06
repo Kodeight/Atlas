@@ -42,20 +42,34 @@ function mapDbProductToStorefront(dbProduct: any) {
   const galleryUrls = relImages.map((g: any) => g.url).filter((u: any) => typeof u === 'string' && u.length > 0);
   const colorNameById = new Map<string, string>();
   for (const c of relColors) {
-    if (c && c.id) colorNameById.set(c.id, c.name);
+    if (c && c.id) {
+      const shown = typeof c.name === 'string' && c.name.trim() ? c.name.trim() : null;
+      const hex = typeof c.hex === 'string' && c.hex ? c.hex : '#1F5742';
+      colorNameById.set(c.id, shown || hex);
+    }
   }
   const colors =
     relColors.length > 0
       ? relColors.map((c: any) => {
-          const entry: { name: string; hex: string; imageIndex?: number } = {
-            name: c.name,
-            hex: typeof c.hex === 'string' && c.hex ? c.hex : '#1F5742',
+          const shown = typeof c.name === 'string' && c.name.trim() ? c.name.trim() : null;
+          const hex = typeof c.hex === 'string' && c.hex ? c.hex : '#1F5742';
+          const entry: { name: string; displayName: string | null; hex: string; imageIndex?: number } = {
+            name: shown || hex,
+            displayName: shown,
+            hex,
           };
           const galleryIdx = relImages.findIndex((g: any) => g.colorId && g.colorId === c.id);
           if (galleryEnabled && galleryIdx >= 0) entry.imageIndex = 1 + galleryIdx;
           return entry;
         })
-      : [{ name: dbProduct.flavor || 'Default', hex: dbProduct.color || '#1F5742', imageIndex: 0 }];
+      : [
+          {
+            name: dbProduct.flavor || 'Default',
+            displayName: dbProduct.flavor || 'Default',
+            hex: dbProduct.color || '#1F5742',
+            imageIndex: 0,
+          },
+        ];
   const enabledSizes = relSizes.filter((s: any) => s && s.enabled !== false && typeof s.label === 'string');
   return {
     id: dbProduct.id,

@@ -132,12 +132,13 @@ try {
 const JWT_SECRET = process.env.JWT_SECRET || "xcCuJMhPBtPz3cAdYGJBllHjFlEsCPREy4d8BqV3IQK";
 const APP_URL = process.env.APP_URL || "";
 const TOKEN_NAME = "atlas_admin_token";
+const SESSION_TTL_SECONDS = 8 * 60 * 60;
 
 const cookieOptionsBase = {
   httpOnly: true,
   sameSite: "lax" as const,
   secure: process.env.NODE_ENV === "production",
-  maxAge: 15 * 60 * 1000,
+  maxAge: SESSION_TTL_SECONDS * 1000,
   path: "/",
 };
 
@@ -191,12 +192,15 @@ function defaultProductTheme(name: string) {
 
 const colorInputSchema = z.object({
   key: z.string().max(80).optional(),
-  name: z.string().min(1).max(80),
+  // Name is optional: a color is valid with only its hex value.
+  name: z.string().max(80).optional(),
   nameFr: z.string().max(80).optional(),
   hex: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Hex must look like #1F5742."),
   label: z.string().max(40).optional(),
 });
 
+// Name → hex recognition lives client-side (src/components/admin/colorNames.ts).
+// The server requires a valid hex and stores the name only when provided.
 const sizeInputSchema = z.object({
   key: z.string().max(80).optional(),
   label: z.string().min(1).max(10),
@@ -241,7 +245,7 @@ async function saveProductRelations(productId: string, payload: VariantPayload) 
         const created = await tx.productColor.create({
           data: {
             productId,
-            name: c.name,
+            name: c.name?.trim() ? c.name.trim() : null,
             nameFr: c.nameFr || null,
             hex: c.hex,
             label: c.label || null,
@@ -504,7 +508,7 @@ async function seedInitialProducts() {
 }
 
 function createToken(userId: string) {
-  return jwt.sign({ role: "admin", userId }, JWT_SECRET, { expiresIn: "15m" });
+  return jwt.sign({ role: "admin", userId }, JWT_SECRET, { expiresIn: SESSION_TTL_SECONDS });
 }
 
 function verifyToken(token: string) {

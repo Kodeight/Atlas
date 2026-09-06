@@ -39,7 +39,7 @@ model ProductColor {
   id        String         @id @default(cuid())
   productId String
   product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  name      String
+  name      String?
   nameFr    String?
   hex       String         @default("#1F5742")
   label     String?

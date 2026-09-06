@@ -1,6 +1,6 @@
-import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useRef, useState, useEffect } from 'react';
 import { Language, TRANSLATIONS, detectBrowserLanguage } from '../i18n/translations';
-import { fetchProductsFromCMS, hasFetchedFromCMS, mapAdminProductsToStorefront, getAllAtlasProductsFallback, setCachedProducts } from '../data/products';
+import { fetchProductsFromCMS, hasFetchedFromCMS, mapAdminProductsToStorefront, getAllAtlasProductsFallback, setCachedProducts, wasFallbackUsed } from '../data/products';
 import { Product, CartItem, ProductColor } from '../types';
 
 interface OrderNowParams {
@@ -54,6 +54,7 @@ interface ShopContextType {
   // Product state - fetched from CMS or static fallback
   products: Product[];
   setProducts: (prods: Product[]) => void;
+  refreshProducts: () => Promise<void>;
   isProductsLoading: boolean;
   error: string | null;
   codEnabled: boolean;
@@ -122,31 +123,44 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .catch(() => {});
   }, []);
 
+  // Revalidatable CMS product load. The database is the single source of truth;
+  // the static catalog is only a fallback, and its use is surfaced to the user.
+  const refreshInFlight = useRef(false);
+  const productsRef = useRef<Product[]>([]);
+  productsRef.current = products;
+
+  const refreshProducts = useCallback(async () => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
+    setIsProductsLoading(true);
+    setError(null);
+    try {
+      const cmsProducts = await fetchProductsFromCMS(language === 'fr' ? 'fr' : 'en');
+      setProducts(cmsProducts);
+      setCachedProducts(cmsProducts);
+      if (wasFallbackUsed() && productsRef.current.length === 0) {
+        showToast(t('catalogOffline'));
+      }
+    } catch (err) {
+      console.error('Failed to load products from CMS:', err);
+      setError('Failed to load products. Using available data.');
+      const fallback = getAllAtlasProductsFallback();
+      setProducts(fallback);
+      setCachedProducts(fallback);
+      if (productsRef.current.length === 0) showToast(t('catalogOffline'));
+    } finally {
+      setIsProductsLoading(false);
+      refreshInFlight.current = false;
+    }
+    // Note: showToast/t intentionally omitted from deps — both are stable for a
+    // given language, which already retriggers this callback.
+  }, [language]);
+
   // Fetch products from CMS when component mounts or the language changes
   // (product names/descriptions/tags are stored in both English and French)
   useEffect(() => {
-    async function loadProducts() {
-      setIsProductsLoading(true);
-      setError(null);
-
-      try {
-        const cmsProducts = await fetchProductsFromCMS(language === 'fr' ? 'fr' : 'en');
-        setProducts(cmsProducts);
-        setCachedProducts(cmsProducts);
-        setIsProductsLoading(false);
-      } catch (err) {
-        console.error('Failed to load products from CMS:', err);
-        setError('Failed to load products. Using available data.');
-        // Fall back to static Atlas products
-        const fallback = getAllAtlasProductsFallback();
-        setProducts(fallback);
-        setCachedProducts(fallback);
-        setIsProductsLoading(false);
-      }
-    }
-
-    loadProducts();
-  }, [language]);
+    refreshProducts();
+  }, [refreshProducts]);
 
   // Helper to get products - use CMS data if available, otherwise static fallback
   const getProducts = (): Product[] => {
@@ -299,6 +313,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         t,
         products: getProducts(),
         setProducts,
+        refreshProducts,
         isProductsLoading,
         error,
         codEnabled,

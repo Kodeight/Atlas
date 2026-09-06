@@ -12,6 +12,8 @@ export type ProductCategory =
 
 export interface ProductColor {
   name: string;
+  /** Real display name, or null when the admin gave none (UI must not invent one). */
+  displayName?: string | null;
   hex: string;
   imageIndex?: number;
 }

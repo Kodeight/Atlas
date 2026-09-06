@@ -5,6 +5,7 @@ export const TRANSLATIONS = {
     // Top Bar
     topAnnouncement: 'Livraison à domicile sur les 69 Wilayas • Paiement à la réception',
     freeShippingThresholdNote: 'Livraison offerte dès 20 000 DA d’achats',
+    catalogOffline: 'Catalogue en direct indisponible — affichage des données locales.',
 
     // Navigation
     navHome: 'Accueil',
@@ -177,6 +178,7 @@ export const TRANSLATIONS = {
     // Top Bar
     topAnnouncement: 'Door-to-door delivery across all 69 Wilayas • Pay on delivery',
     freeShippingThresholdNote: 'Free delivery on orders over 20,000 DA',
+    catalogOffline: 'Live catalog unreachable — showing local data.',
 
     // Navigation
     navHome: 'Home',

@@ -113,7 +113,7 @@ export const GalleryManager: React.FC<GalleryManagerProps> = ({ images, colors, 
               <option value="">{t.imgNoColor}</option>
               {colors.map((c) => (
                 <option key={c.key} value={c.key}>
-                  {c.name}
+                  {c.name || t.imgNoColor}
                 </option>
               ))}
             </select>

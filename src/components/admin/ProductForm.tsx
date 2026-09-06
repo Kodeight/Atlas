@@ -2,6 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Upload, X } from 'lucide-react';
 import { adminText, AdminLang } from './adminText';
 import { compressImageFile, isSupportedImage } from './imageUpload';
+import { isValidHex, recognizeHex } from './colorNames';
+
+const FALLBACK_HEX = '#1F5742';
+
+function resolveHex(name: string, nameFr: string, hex: string): string {
+  if (isValidHex(hex)) return hex;
+  return recognizeHex(name) ?? recognizeHex(nameFr) ?? FALLBACK_HEX;
+}
 import { ColorManager, ColorRow, blankColor } from './ColorManager';
 import { SizeManager, SizeRow, blankSize } from './SizeManager';
 import { GalleryManager, GalleryRow } from './GalleryManager';
@@ -20,7 +28,7 @@ export interface AdminProduct {
   color?: string;
   bgGradient?: string;
   galleryEnabled?: boolean;
-  colors?: { id: string; name: string; nameFr?: string | null; hex: string; label?: string | null }[];
+  colors?: { id: string; name?: string | null; nameFr?: string | null; hex: string; label?: string | null }[];
   sizes?: { id: string; label: string; enabled: boolean; stock?: number | null }[];
   images?: { id: string; url: string; alt?: string | null; colorId?: string | null }[];
 }
@@ -132,7 +140,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, onSubmi
       setColors(
         (product.colors || []).map((c) => ({
           key: c.id,
-          name: c.name,
+          name: c.name || '',
           nameFr: c.nameFr || '',
           hex: c.hex,
           label: c.label || '',
@@ -207,7 +215,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, onSubmi
       return;
     }
     for (const c of colors) {
-      if (c.name.trim().length < 1 || !/^#[0-9a-fA-F]{6}$/.test(c.hex)) {
+      // Name is optional (swatch-only colors allowed); a valid hex is always
+      // resolved on submit, so there is nothing to reject here.
+      if (typeof c.hex !== 'string') {
         setError(t.eName);
         return;
       }
@@ -237,9 +247,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, onSubmi
       galleryEnabled: form.galleryEnabled,
       colors: colors.map((c) => ({
         key: c.key,
-        name: c.name.trim(),
+        name: blankToUndefined(c.name),
         nameFr: blankToUndefined(c.nameFr),
-        hex: c.hex,
+        hex: resolveHex(c.name, c.nameFr, c.hex),
         label: blankToUndefined(c.label),
       })),
       sizes: sizes.map((s) => ({

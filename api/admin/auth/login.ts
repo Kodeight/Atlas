@@ -80,7 +80,8 @@ export default async function handler(req: any, res: any) {
     }
 
     const targetUser = user || { id: 'admin-1', email: 'admin@atlas.dz', name: 'Store Admin', pfp: '' };
-    const token = jwt.sign({ role: 'admin', userId: targetUser.id }, JWT_SECRET, { expiresIn: '15m' });
+    const SESSION_TTL_SECONDS = 8 * 60 * 60;
+    const token = jwt.sign({ role: 'admin', userId: targetUser.id }, JWT_SECRET, { expiresIn: SESSION_TTL_SECONDS });
 
     // Set cookie - must be httpOnly, secure in production, sameSite lax
     const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
@@ -89,7 +90,7 @@ export default async function handler(req: any, res: any) {
       'Path=/',
       'HttpOnly',
       'SameSite=Lax',
-      `Max-Age=${15 * 60}`,
+      `Max-Age=${SESSION_TTL_SECONDS}`,
     ];
     if (isProd) cookieParts.push('Secure');
     // Do not set Domain to allow Vercel's default domain

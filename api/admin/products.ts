@@ -25,6 +25,8 @@ function requireAdmin(req: any): boolean {
 }
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+// Name → hex recognition lives client-side (src/components/admin/colorNames.ts).
+// The server requires a valid hex and stores the name only when provided.
 
 function badBody(body: any): string | null {
   if (!body || typeof body.name !== 'string' || body.name.trim().length < 3) return 'Product name is required.';
@@ -39,7 +41,8 @@ function badBody(body: any): string | null {
   if (body.colors !== undefined) {
     if (!Array.isArray(body.colors) || body.colors.length > 40) return 'Invalid colors.';
     for (const c of body.colors) {
-      if (!c || typeof c.name !== 'string' || c.name.trim().length < 1 || c.name.length > 80) return 'Each color needs a name.';
+      if (!c) return 'Invalid colors.';
+      if (c.name !== undefined && (typeof c.name !== 'string' || c.name.length > 80)) return 'Invalid color name.';
       if (typeof c.hex !== 'string' || !HEX_RE.test(c.hex)) return 'Each color needs a hex like #1F5742.';
       if (c.nameFr !== undefined && typeof c.nameFr !== 'string') return 'Invalid color name.';
       if (c.label !== undefined && typeof c.label !== 'string') return 'Invalid color label.';
@@ -77,7 +80,14 @@ async function saveRelations(prisma: any, productId: string, body: any) {
       for (let i = 0; i < body.colors.length; i++) {
         const c = body.colors[i];
         const created = await tx.productColor.create({
-          data: { productId, name: c.name, nameFr: c.nameFr || null, hex: c.hex, label: c.label || null, position: i },
+          data: {
+            productId,
+            name: typeof c.name === 'string' && c.name.trim() ? c.name.trim() : null,
+            nameFr: c.nameFr || null,
+            hex: c.hex,
+            label: c.label || null,
+            position: i,
+          },
         });
         if (c.key) colorIdByKey.set(c.key, created.id);
       }
