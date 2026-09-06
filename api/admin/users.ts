@@ -30,12 +30,31 @@ function toProfile(u: any) {
   return { id: u.id, email: u.email, name: u.name, pfp: u.pfp };
 }
 
+function getQueryId(req: any): string | undefined {
+  const q = req.query?.id;
+  return Array.isArray(q) ? q[0] : q;
+}
+
 export default async function handler(req: any, res: any) {
   const userId = requireAdmin(req);
   if (!userId) return res.status(401).json({ message: 'Unauthorized access' });
 
   const prisma = new PrismaClient();
   try {
+    // Delete via ?id= (explicit rewrite target; dynamic [id] file routes
+    // do not resolve on this deployment and fall through to the SPA fallback)
+    if (req.method === 'DELETE') {
+      const targetId = getQueryId(req);
+      if (!targetId) return res.status(400).json({ message: 'Admin id is required.' });
+      if (targetId === userId) {
+        return res.status(400).json({ message: 'Cannot delete the current signed-in admin.' });
+      }
+      const target = await prisma.adminUser.findUnique({ where: { id: targetId } });
+      if (!target) return res.status(404).json({ message: 'Admin not found.' });
+      await prisma.adminUser.delete({ where: { id: targetId } });
+      return res.status(200).json({ success: true });
+    }
+
     if (req.method === 'GET') {
       const users = await prisma.adminUser.findMany();
       return res.status(200).json(users.map(toProfile));
@@ -66,7 +85,7 @@ export default async function handler(req: any, res: any) {
       return res.status(201).json(toProfile(created));
     }
 
-    res.setHeader('Allow', 'GET, POST');
+    res.setHeader('Allow', 'GET, POST, DELETE');
     return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
   } finally {
     await prisma.$disconnect().catch(() => {});

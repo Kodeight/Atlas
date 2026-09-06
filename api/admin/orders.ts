@@ -24,9 +24,59 @@ function requireAdmin(req: any): boolean {
   }
 }
 
+const STATUSES = ['pending', 'processing', 'delivered'];
+
+function getQueryId(req: any): string | undefined {
+  const q = req.query?.id;
+  return Array.isArray(q) ? q[0] : q;
+}
+
 export default async function handler(req: any, res: any) {
+  // Status updates via ?id= (explicit rewrite target; dynamic [id] file routes
+  // do not resolve on this deployment and fall through to the SPA fallback)
+  if (req.method === 'PATCH') {
+    if (!requireAdmin(req)) return res.status(401).json({ message: 'Unauthorized access' });
+    const id = getQueryId(req);
+    if (!id) return res.status(400).json({ message: 'Order id is required.' });
+    const data: { status?: string; shippingCompany?: string | null; deliveryType?: string } = {};
+    if (req.body?.status !== undefined) {
+      if (!STATUSES.includes(req.body.status)) {
+        return res.status(400).json({ message: 'Valid status is required.' });
+      }
+      data.status = req.body.status;
+    }
+    if (req.body?.company !== undefined) {
+      if (typeof req.body.company !== 'string' || req.body.company.length > 100) {
+        return res.status(400).json({ message: 'Valid company is required.' });
+      }
+      data.shippingCompany = req.body.company || null;
+    }
+    if (req.body?.deliveryType !== undefined) {
+      if (!['home', 'stopdesk'].includes(req.body.deliveryType)) {
+        return res.status(400).json({ message: 'Valid delivery type is required.' });
+      }
+      data.deliveryType = req.body.deliveryType;
+    }
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({ message: 'Nothing to update.' });
+    }
+    const prisma = new PrismaClient();
+    try {
+      const existing = await prisma.order.findUnique({ where: { id } });
+      if (!existing) return res.status(404).json({ message: 'Order not found.' });
+      const updated = await prisma.order.update({
+        where: { id },
+        data,
+        include: { items: true },
+      });
+      return res.status(200).json({ ...updated, date: updated.date.toISOString() });
+    } finally {
+      await prisma.$disconnect().catch(() => {});
+    }
+  }
+
   if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
+    res.setHeader('Allow', 'GET, PATCH');
     return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
   }
   // Order list stays server-enforced behind the admin session

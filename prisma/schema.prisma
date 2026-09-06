@@ -16,27 +16,39 @@ model AdminUser {
 }
 
 model Product {
-  id         String   @id
-  name       String
-  flavor     String?
-  description String
-  price      Float
-  image      String
-  stock      Int
-  color      String?
-  bgGradient String?
-  createdAt  DateTime @default(now())
+  id            String   @id
+  name          String
+  nameFr        String?
+  flavor        String?
+  flavorFr      String?
+  description   String
+  descriptionFr String?
+  price         Float
+  image         String
+  stock         Int
+  color         String?
+  bgGradient    String?
+  createdAt     DateTime @default(now())
 }
 
 model Order {
-  id           String      @id @default(cuid())
-  customerName String
-  phone        String
-  address      String
-  total        Float
-  status       String      @default("pending")
-  date         DateTime    @default(now())
-  items        OrderItem[]
+  id             String      @id @default(cuid())
+  customerName   String
+  phone          String
+  address        String
+  total          Float
+  status         String      @default("pending")
+  shippingCompany String?
+  deliveryType   String      @default("home")
+  date           DateTime    @default(now())
+  items          OrderItem[]
+}
+
+model ShippingCompany {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
 }
 
 model OrderItem {

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useShop } from '../context/ShopContext';
 import { AtlasLogo } from '../components/BrandElements';
-import { LogOut, Menu, Package, Pencil, Plus, ShoppingCart, Trash2, Users, LayoutDashboard, Settings, X } from 'lucide-react';
+import { LogOut, Menu, Download, Package, Pencil, Plus, ShoppingCart, Trash2, Users, LayoutDashboard, Settings, X } from 'lucide-react';
 import { ProductForm, AdminProduct, ProductFormValue } from '../components/admin/ProductForm';
+import { adminText } from '../components/admin/adminText';
+import { downloadOrdersCsv } from '../components/admin/ordersCsv';
 
 interface AdminUser {
   id: string;
@@ -18,9 +20,18 @@ interface AdminOrder {
   address: string;
   total: number;
   status: 'pending' | 'processing' | 'delivered';
+  shippingCompany?: string | null;
+  deliveryType?: string;
   date: string;
   products?: { productId: string; name: string; quantity: number; price: number }[];
   items?: { productId: string; name: string; quantity: number; price: number }[];
+}
+
+interface ShippingCompany {
+  id: string;
+  name: string;
+  active: boolean;
+  createdAt: string;
 }
 
 type ActiveTab = 'dashboard' | 'products' | 'orders' | 'admins' | 'settings';
@@ -37,12 +48,15 @@ async function adminApi(path: string, options: RequestInit = {}) {
 }
 
 const AdminPage: React.FC = () => {
-  const { navigate } = useShop();
+  const { navigate, language, setLanguage } = useShop();
+  const t = adminText[language === 'fr' ? 'fr' : 'en'];
   const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [companies, setCompanies] = useState<ShippingCompany[]>([]);
+  const [companyName, setCompanyName] = useState('');
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -80,14 +94,16 @@ const AdminPage: React.FC = () => {
   }, [notice]);
 
   const reload = async () => {
-    const [freshProducts, freshOrders, freshUsers] = await Promise.all([
+    const [freshProducts, freshOrders, freshUsers, freshCompanies] = await Promise.all([
       adminApi('/products').catch(() => []),
       adminApi('/orders').catch(() => []),
       adminApi('/users').catch(() => []),
+      adminApi('/companies').catch(() => []),
     ]);
     setProducts(Array.isArray(freshProducts) ? freshProducts : []);
     setOrders(Array.isArray(freshOrders) ? freshOrders : []);
     setUsers(Array.isArray(freshUsers) ? freshUsers : []);
+    setCompanies(Array.isArray(freshCompanies) ? freshCompanies : []);
   };
 
   useEffect(() => {
@@ -100,16 +116,16 @@ const AdminPage: React.FC = () => {
     try {
       if (editingProduct) {
         await adminApi(`/products/${editingProduct.id}`, { method: 'PUT', body: JSON.stringify(value) });
-        showNotice('success', 'Product updated.');
+        showNotice('success', t.nProdUpdated);
       } else {
         await adminApi('/products', { method: 'POST', body: JSON.stringify(value) });
-        showNotice('success', 'Product added.');
+        showNotice('success', t.nProdAdded);
       }
       setFormOpen(false);
       setEditingProduct(null);
       await reload();
     } catch (e) {
-      showNotice('error', e instanceof Error ? e.message : 'Could not save product.');
+      showNotice('error', e instanceof Error ? e.message : t.nErrSave);
     } finally {
       setSaving(false);
     }
@@ -119,20 +135,54 @@ const AdminPage: React.FC = () => {
     try {
       await adminApi(`/products/${id}`, { method: 'DELETE' });
       setDeleteTarget(null);
-      showNotice('success', 'Product deleted.');
+      showNotice('success', t.nProdDeleted);
       await reload();
     } catch (e) {
-      showNotice('error', e instanceof Error ? e.message : 'Could not delete product.');
+      showNotice('error', e instanceof Error ? e.message : t.nErrDelete);
     }
   };
 
-  const handleOrderStatus = async (id: string, status: AdminOrder['status']) => {
+  const handleOrderUpdate = async (id: string, patch: { status?: AdminOrder['status']; company?: string; deliveryType?: string }) => {
     try {
-      await adminApi(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
-      showNotice('success', 'Order status updated.');
+      await adminApi(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify(patch) });
+      showNotice('success', t.nOrderUpdated);
       await reload();
     } catch (e) {
-      showNotice('error', e instanceof Error ? e.message : 'Could not update order status.');
+      showNotice('error', e instanceof Error ? e.message : t.nErrOrder);
+    }
+  };
+
+  const handleCreateCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = companyName.trim();
+    if (name.length < 2) return;
+    try {
+      await adminApi('/companies', { method: 'POST', body: JSON.stringify({ name }) });
+      setCompanyName('');
+      showNotice('success', t.nCompanyAdded);
+      await reload();
+    } catch (err) {
+      showNotice('error', err instanceof Error ? err.message : t.nErrCompany);
+    }
+  };
+
+  const handleToggleCompany = async (company: ShippingCompany) => {
+    try {
+      await adminApi(`/companies/${company.id}`, { method: 'PATCH', body: JSON.stringify({ active: !company.active }) });
+      showNotice('success', t.nCompanyUpdated);
+      await reload();
+    } catch (err) {
+      showNotice('error', err instanceof Error ? err.message : t.nErrCompany);
+    }
+  };
+
+  const handleDeleteCompany = async (id: string) => {
+    try {
+      await adminApi(`/companies/${id}`, { method: 'DELETE' });
+      showNotice('success', t.nCompanyDeleted);
+      await reload();
+    } catch (err) {
+      showNotice('error', err instanceof Error ? err.message : t.nErrCompanyDelete);
     }
   };
 
@@ -141,20 +191,20 @@ const AdminPage: React.FC = () => {
     try {
       await adminApi('/users', { method: 'POST', body: JSON.stringify(userForm) });
       setUserForm({ name: '', email: '', password: '' });
-      showNotice('success', 'Admin user created.');
+      showNotice('success', t.nAdminCreated);
       await reload();
     } catch (err) {
-      showNotice('error', err instanceof Error ? err.message : 'Could not create admin user.');
+      showNotice('error', err instanceof Error ? err.message : t.nErrUserCreate);
     }
   };
 
   const handleDeleteUser = async (id: string) => {
     try {
       await adminApi(`/users/${id}`, { method: 'DELETE' });
-      showNotice('success', 'Admin user deleted.');
+      showNotice('success', t.nAdminDeleted);
       await reload();
     } catch (err) {
-      showNotice('error', err instanceof Error ? err.message : 'Could not delete admin user.');
+      showNotice('error', err instanceof Error ? err.message : t.nErrUserDelete);
     }
   };
 
@@ -174,7 +224,7 @@ const AdminPage: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F3EA] text-[#151515]">
-        <div className="text-sm text-[#6D6D6D]">Loading admin...</div>
+        <div className="text-sm text-[#6D6D6D] font-sans-ui">{t.loading}</div>
       </div>
     );
   }
@@ -182,11 +232,11 @@ const AdminPage: React.FC = () => {
   if (!user) return null;
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'products', label: 'Products', icon: Package },
-    { id: 'orders', label: 'Orders', icon: ShoppingCart },
-    { id: 'admins', label: 'Admins', icon: Users },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'dashboard', label: t.navDashboard, icon: LayoutDashboard },
+    { id: 'products', label: t.navProducts, icon: Package },
+    { id: 'orders', label: t.navOrders, icon: ShoppingCart },
+    { id: 'admins', label: t.navAdmins, icon: Users },
+    { id: 'settings', label: t.navSettings, icon: Settings },
   ] as const;
 
   return (
@@ -215,7 +265,7 @@ const AdminPage: React.FC = () => {
             <button
               onClick={() => setSidebarOpen(false)}
               className="md:hidden p-1.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white"
-              aria-label="Close menu"
+              aria-label={t.closeMenu}
             >
               <X className="w-5 h-5" />
             </button>
@@ -252,13 +302,13 @@ const AdminPage: React.FC = () => {
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors"
           >
             <LogOut className="w-4 h-4" />
-            Logout
+            {t.logout}
           </button>
           <button
             onClick={() => navigate('/')}
             className="w-full mt-2 text-xs text-white/60 hover:text-white text-left px-3"
           >
-            ← Back to storefront
+            ← {t.backToStorefront}
           </button>
         </div>
       </aside>
@@ -270,13 +320,29 @@ const AdminPage: React.FC = () => {
             <button
               onClick={() => setSidebarOpen(true)}
               className="md:hidden p-2 -ml-1 rounded-lg text-[#1F5742] hover:bg-[#F7F3EA]"
-              aria-label="Open menu"
+              aria-label={t.openMenu}
             >
               <Menu className="w-5 h-5" />
             </button>
             <h1 className="text-lg font-semibold text-[#151515] font-sans-ui capitalize truncate">{activeTab}</h1>
           </div>
-          <div className="text-xs text-[#6D6D6D] shrink-0">Atlas Admin • {new Date().toLocaleDateString()}</div>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center rounded-full border border-[#E7E3DA] p-0.5 text-[11px] font-semibold font-sans-ui">
+              <button
+                onClick={() => setLanguage('en')}
+                className={`px-2.5 py-1 rounded-full transition-colors ${language !== 'fr' ? 'bg-[#1F5742] text-white' : 'text-[#6D6D6D]'}`}
+              >
+                EN
+              </button>
+              <button
+                onClick={() => setLanguage('fr')}
+                className={`px-2.5 py-1 rounded-full transition-colors ${language === 'fr' ? 'bg-[#1F5742] text-white' : 'text-[#6D6D6D]'}`}
+              >
+                FR
+              </button>
+            </div>
+            <div className="text-xs text-[#6D6D6D] hidden sm:block">Atlas Admin • {new Date().toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}</div>
+          </div>
         </header>
         <main className="flex-1 p-4 sm:p-6 bg-[#F7F3EA] overflow-auto">
           {notice && (
@@ -294,36 +360,36 @@ const AdminPage: React.FC = () => {
             <div className="grid gap-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
-                  <div className="text-xs font-medium text-[#6D6D6D] font-sans-ui">Products</div>
+                  <div className="text-xs font-medium text-[#6D6D6D] font-sans-ui">{t.cardProducts}</div>
                   <div className="text-2xl font-semibold text-[#151515] mt-1 font-sans-ui">{products.length}</div>
-                  <div className="text-xs text-[#6D6D6D] mt-1 font-sans-ui">Managed in CMS</div>
+                  <div className="text-xs text-[#6D6D6D] mt-1 font-sans-ui">{t.cardManaged}</div>
                 </div>
                 <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
-                  <div className="text-xs font-medium text-[#6D6D6D] font-sans-ui">Orders</div>
+                  <div className="text-xs font-medium text-[#6D6D6D] font-sans-ui">{t.cardOrders}</div>
                   <div className="text-2xl font-semibold text-[#151515] mt-1 font-sans-ui">{orders.length}</div>
-                  <div className="text-xs text-[#6D6D6D] mt-1 font-sans-ui">COD orders</div>
+                  <div className="text-xs text-[#6D6D6D] mt-1 font-sans-ui">{t.cardCod}</div>
                 </div>
                 <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
-                  <div className="text-xs font-medium text-[#6D6D6D] font-sans-ui">Revenue</div>
+                  <div className="text-xs font-medium text-[#6D6D6D] font-sans-ui">{t.cardRevenue}</div>
                   <div className="text-2xl font-semibold text-[#1F5742] mt-1">
                     {orders.reduce((s: number, o: any) => s + (o.total || 0), 0).toLocaleString()} DA
                   </div>
-                  <div className="text-xs text-[#6D6D6D] mt-1">Total sales</div>
+                  <div className="text-xs text-[#6D6D6D] mt-1">{t.cardSales}</div>
                 </div>
               </div>
               <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
-                <h3 className="text-sm font-semibold text-[#151515] mb-3 font-sans-ui">Recent Orders</h3>
+                <h3 className="text-sm font-semibold text-[#151515] mb-3 font-sans-ui">{t.recentOrders}</h3>
                 {orders.length === 0 ? (
-                  <div className="text-sm text-[#6D6D6D]">No orders yet.</div>
+                  <div className="text-sm text-[#6D6D6D]">{t.noOrders}</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-xs text-[#6D6D6D] border-b border-[#E7E3DA]">
-                          <th className="text-left py-2 font-medium">Order</th>
-                          <th className="text-left py-2 font-medium">Customer</th>
-                          <th className="text-left py-2 font-medium">Total</th>
-                          <th className="text-left py-2 font-medium">Status</th>
+                          <th className="text-left py-2 font-medium">{t.thOrder}</th>
+                          <th className="text-left py-2 font-medium">{t.thCustomer}</th>
+                          <th className="text-left py-2 font-medium">{t.thTotal}</th>
+                          <th className="text-left py-2 font-medium">{t.thStatus}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -347,7 +413,7 @@ const AdminPage: React.FC = () => {
           {activeTab === 'products' && (
             <div className="grid gap-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm text-[#6D6D6D] font-sans-ui">Managed via CMS • changes appear on storefront</div>
+                <div className="text-sm text-[#6D6D6D] font-sans-ui">{t.productsSub}</div>
                 <button
                   onClick={() => {
                     setEditingProduct(null);
@@ -355,16 +421,17 @@ const AdminPage: React.FC = () => {
                   }}
                   className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-[#1F5742] text-white text-sm font-medium font-sans-ui hover:bg-[#164030] transition-colors"
                 >
-                  <Plus className="w-4 h-4" /> Add product
+                  <Plus className="w-4 h-4" /> {t.addProduct}
                 </button>
               </div>
               {formOpen && (
                 <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
                   <h3 className="text-sm font-semibold text-[#151515] font-sans-ui mb-4">
-                    {editingProduct ? 'Update product' : 'Add new product'}
+                    {editingProduct ? t.formEdit : t.formNew}
                   </h3>
                   <ProductForm
                     product={editingProduct}
+                    lang={language === 'fr' ? 'fr' : 'en'}
                     saving={saving}
                     onCancel={() => {
                       setFormOpen(false);
@@ -376,16 +443,16 @@ const AdminPage: React.FC = () => {
               )}
               <div className="bg-white rounded-lg border border-[#E7E3DA] overflow-hidden">
                 <div className="px-5 py-4 border-b border-[#E7E3DA]">
-                  <h3 className="text-sm font-semibold font-sans-ui">Products ({products.length})</h3>
+                  <h3 className="text-sm font-semibold font-sans-ui">{t.cardProducts} ({products.length})</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-xs text-[#6D6D6D] border-b border-[#E7E3DA] bg-[#FCFBF7]">
-                        <th className="text-left px-4 py-2 font-medium">Product</th>
-                        <th className="text-left px-4 py-2 font-medium">Price</th>
-                        <th className="text-left px-4 py-2 font-medium">Stock</th>
-                        <th className="text-right px-4 py-2 font-medium">Actions</th>
+                        <th className="text-left px-4 py-2 font-medium">{t.thProduct}</th>
+                        <th className="text-left px-4 py-2 font-medium">{t.thPrice}</th>
+                        <th className="text-left px-4 py-2 font-medium">{t.thStock}</th>
+                        <th className="text-right px-4 py-2 font-medium">{t.thActions}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -408,7 +475,7 @@ const AdminPage: React.FC = () => {
                           <td className="px-4 py-2 whitespace-nowrap">{p.price} DA</td>
                           <td className="px-4 py-2 whitespace-nowrap">
                             {p.stock <= 0 ? (
-                              <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700">Out of stock</span>
+                              <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700">{t.outOfStock}</span>
                             ) : (
                               p.stock
                             )}
@@ -423,7 +490,7 @@ const AdminPage: React.FC = () => {
                                 }}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#E7E3DA] text-xs font-medium text-[#151515] hover:bg-[#F7F3EA] transition-colors"
                               >
-                                <Pencil className="w-3.5 h-3.5" /> Edit
+                                <Pencil className="w-3.5 h-3.5" /> {t.edit}
                               </button>
                               {deleteTarget === p.id ? (
                                 <>
@@ -431,13 +498,13 @@ const AdminPage: React.FC = () => {
                                     onClick={() => handleDeleteProduct(p.id)}
                                     className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition-colors"
                                   >
-                                    Confirm
+                                    {t.confirm}
                                   </button>
                                   <button
                                     onClick={() => setDeleteTarget(null)}
                                     className="px-3 py-1.5 rounded-lg border border-[#E7E3DA] text-xs font-medium text-[#151515] hover:bg-[#F7F3EA] transition-colors"
                                   >
-                                    Keep
+                                    {t.keep}
                                   </button>
                                 </>
                               ) : (
@@ -445,7 +512,7 @@ const AdminPage: React.FC = () => {
                                   onClick={() => setDeleteTarget(p.id)}
                                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-xs font-medium text-red-700 hover:bg-red-100 transition-colors"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                                  <Trash2 className="w-3.5 h-3.5" /> {t.delete}
                                 </button>
                               )}
                             </div>
@@ -455,7 +522,7 @@ const AdminPage: React.FC = () => {
                       {products.length === 0 && (
                         <tr>
                           <td colSpan={4} className="px-4 py-8 text-center text-sm text-[#6D6D6D]">
-                            No products yet. Add the first one to populate the storefront.
+                            {t.productsEmpty}
                           </td>
                         </tr>
                       )}
@@ -467,18 +534,27 @@ const AdminPage: React.FC = () => {
           )}
           {activeTab === 'orders' && (
             <div className="bg-white rounded-lg border border-[#E7E3DA] overflow-hidden">
-              <div className="px-5 py-4 border-b border-[#E7E3DA]">
-                <h3 className="text-sm font-semibold font-sans-ui">Orders ({orders.length})</h3>
+              <div className="px-5 py-4 border-b border-[#E7E3DA] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-sm font-semibold">{t.cardOrders} ({orders.length})</h3>
+                <button
+                  onClick={() => downloadOrdersCsv(orders, language === 'fr' ? 'fr' : 'en')}
+                  disabled={orders.length === 0}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-[#E7E3DA] text-xs font-medium font-sans-ui text-[#151515] hover:bg-[#F7F3EA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="w-3.5 h-3.5" /> {t.exportOrders}
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-xs text-[#6D6D6D] border-b border-[#E7E3DA] bg-[#FCFBF7]">
-                      <th className="text-left px-4 py-2 font-medium">Order</th>
-                      <th className="text-left px-4 py-2 font-medium">Customer</th>
-                      <th className="text-left px-4 py-2 font-medium">Phone</th>
-                      <th className="text-left px-4 py-2 font-medium">Total</th>
-                      <th className="text-left px-4 py-2 font-medium">Status</th>
+                      <th className="text-left px-4 py-2 font-medium">{t.thOrder}</th>
+                      <th className="text-left px-4 py-2 font-medium">{t.thCustomer}</th>
+                      <th className="text-left px-4 py-2 font-medium">{t.thPhone}</th>
+                      <th className="text-left px-4 py-2 font-medium">{t.thTotal}</th>
+                      <th className="text-left px-4 py-2 font-medium">{t.thCompany}</th>
+                      <th className="text-left px-4 py-2 font-medium">{t.thDelivery}</th>
+                      <th className="text-left px-4 py-2 font-medium">{t.thStatus}</th>
                     </tr>
                   </thead>
                     <tbody>
@@ -499,9 +575,33 @@ const AdminPage: React.FC = () => {
                             <td className="px-4 py-2 font-medium whitespace-nowrap">{o.total} DA</td>
                             <td className="px-4 py-2">
                               <select
+                                value={o.shippingCompany || ''}
+                                onChange={(e) => handleOrderUpdate(o.id, { company: e.target.value })}
+                                className="pl-3 pr-6 py-1.5 rounded-full text-xs font-medium font-sans-ui border border-[#E7E3DA] bg-white text-[#151515] outline-none cursor-pointer max-w-[140px]"
+                              >
+                                <option value="">—</option>
+                                {companies.filter((c) => c.active || c.name === o.shippingCompany).map((c) => (
+                                  <option key={c.id} value={c.name}>
+                                    {c.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-4 py-2">
+                              <select
+                                value={o.deliveryType === 'stopdesk' ? 'stopdesk' : 'home'}
+                                onChange={(e) => handleOrderUpdate(o.id, { deliveryType: e.target.value })}
+                                className="pl-3 pr-6 py-1.5 rounded-full text-xs font-medium font-sans-ui border border-[#E7E3DA] bg-white text-[#151515] outline-none cursor-pointer"
+                              >
+                                <option value="home">{t.homeDelivery}</option>
+                                <option value="stopdesk">{t.stopDesk}</option>
+                              </select>
+                            </td>
+                            <td className="px-4 py-2">
+                              <select
                                 value={o.status}
-                                onChange={(e) => handleOrderStatus(o.id, e.target.value as AdminOrder['status'])}
-                                className="px-3 py-1.5 rounded-full text-xs font-medium font-sans-ui bg-[#1F5742] text-white outline-none cursor-pointer capitalize"
+                                onChange={(e) => handleOrderUpdate(o.id, { status: e.target.value as AdminOrder['status'] })}
+                                className="pl-3 pr-8 py-1.5 rounded-full text-xs font-medium font-sans-ui bg-[#1F5742] text-white outline-none cursor-pointer capitalize"
                               >
                                 {(['pending', 'processing', 'delivered'] as const).map((s) => (
                                   <option key={s} value={s} className="text-black bg-white capitalize">
@@ -515,8 +615,8 @@ const AdminPage: React.FC = () => {
                       })}
                       {orders.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center text-sm text-[#6D6D6D]">
-                            No orders yet. Orders will appear here once customers check out.
+                          <td colSpan={7} className="px-4 py-8 text-center text-sm text-[#6D6D6D]">
+                            {t.ordersEmpty}
                           </td>
                         </tr>
                       )}
@@ -528,8 +628,8 @@ const AdminPage: React.FC = () => {
           {activeTab === 'admins' && (
             <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
               <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
-                <h3 className="text-sm font-semibold text-[#151515] font-sans-ui">Create admin user</h3>
-                <p className="text-xs text-[#6D6D6D] mt-1 font-sans-ui">Add a new admin with email and password.</p>
+                <h3 className="text-sm font-semibold text-[#151515] font-sans-ui">{t.adminsTitle}</h3>
+                <p className="text-xs text-[#6D6D6D] mt-1 font-sans-ui">{t.adminsSub}</p>
                 <form onSubmit={handleCreateUser} className="mt-4 space-y-3">
                   <input
                     value={userForm.name}
@@ -556,20 +656,20 @@ const AdminPage: React.FC = () => {
                     required
                     minLength={8}
                     autoComplete="new-password"
-                    placeholder="Password (min 8 chars, 1 number)"
+                    placeholder="••••••••"
                     className="w-full px-4 py-3 border border-[#E7E3DA] rounded-lg bg-[#FCFBF7] text-sm font-sans-ui outline-none focus:border-[#1F5742]"
                   />
                   <button
                     type="submit"
                     className="w-full py-3 rounded-lg bg-[#1F5742] text-white text-sm font-medium font-sans-ui hover:bg-[#164030] transition-colors"
                   >
-                    Create admin
+                    {t.adminsCreate}
                   </button>
                 </form>
               </div>
               <div className="bg-white rounded-lg border border-[#E7E3DA] overflow-hidden">
                 <div className="px-5 py-4 border-b border-[#E7E3DA]">
-                  <h3 className="text-sm font-semibold font-sans-ui">Admin users ({users.length})</h3>
+                  <h3 className="text-sm font-semibold font-sans-ui">{t.adminsList} ({users.length})</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -582,13 +682,13 @@ const AdminPage: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 text-right">
                             {u.id === user?.id ? (
-                              <span className="text-xs text-[#6D6D6D]">Current session</span>
+                              <span className="text-xs text-[#6D6D6D]">{t.adminsCurrent}</span>
                             ) : (
                               <button
                                 onClick={() => handleDeleteUser(u.id)}
                                 className="px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-xs font-medium text-red-700 hover:bg-red-100 transition-colors"
                               >
-                                Delete
+                                {t.delete}
                               </button>
                             )}
                           </td>
@@ -596,7 +696,7 @@ const AdminPage: React.FC = () => {
                       ))}
                       {users.length === 0 && (
                         <tr>
-                          <td className="px-4 py-8 text-center text-sm text-[#6D6D6D]">No admin users found.</td>
+                          <td className="px-4 py-8 text-center text-sm text-[#6D6D6D]">{t.adminsEmpty}</td>
                         </tr>
                       )}
                     </tbody>
@@ -606,9 +706,65 @@ const AdminPage: React.FC = () => {
             </div>
           )}
           {activeTab === 'settings' && (
-            <div className="bg-white rounded-lg border border-[#E7E3DA] p-10 text-center">
-              <div className="text-sm font-medium text-[#151515] capitalize">Settings</div>
-              <div className="text-xs text-[#6D6D6D] mt-1">This section is managed via the existing CMS backend.</div>
+            <div className="grid gap-4">
+              <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
+                <h3 className="text-sm font-semibold text-[#151515] font-sans-ui">{t.shipTitle}</h3>
+                <p className="text-xs text-[#6D6D6D] mt-1 font-sans-ui">{t.shipSub}</p>
+                <form onSubmit={handleCreateCompany} className="mt-4 flex flex-col sm:flex-row gap-3">
+                  <input
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder={t.shipAddPh}
+                    className="flex-1 px-4 py-3 border border-[#E7E3DA] rounded-lg bg-[#FCFBF7] text-sm font-sans-ui outline-none focus:border-[#1F5742]"
+                  />
+                  <button
+                    type="submit"
+                    className="px-5 py-3 rounded-lg bg-[#1F5742] text-white text-sm font-medium font-sans-ui hover:bg-[#164030] transition-colors whitespace-nowrap"
+                  >
+                    {t.shipAdd}
+                  </button>
+                </form>
+              </div>
+              <div className="bg-white rounded-lg border border-[#E7E3DA] overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {companies.map((c) => (
+                        <tr key={c.id} className="border-b border-[#E7E3DA]/60 hover:bg-[#F7F3EA]">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-[#151515]">{c.name}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => handleToggleCompany(c)}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium font-sans-ui transition-colors ${
+                                c.active
+                                  ? 'bg-[#1F5742]/10 text-[#1F5742]'
+                                  : 'bg-[#E7E3DA]/60 text-[#6D6D6D]'
+                              }`}
+                            >
+                              {c.active ? t.shipActive : t.shipPaused}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => handleDeleteCompany(c.id)}
+                              className="px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-xs font-medium text-red-700 hover:bg-red-100 transition-colors"
+                            >
+                              {t.delete}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {companies.length === 0 && (
+                        <tr>
+                          <td className="px-4 py-8 text-center text-sm text-[#6D6D6D]">{t.shipEmpty}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
         </main>

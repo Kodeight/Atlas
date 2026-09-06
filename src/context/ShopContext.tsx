@@ -110,14 +110,15 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isProductsLoading, setIsProductsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch products from CMS when component mounts
+  // Fetch products from CMS when component mounts or the language changes
+  // (product names/descriptions/tags are stored in both English and French)
   useEffect(() => {
     async function loadProducts() {
       setIsProductsLoading(true);
       setError(null);
-      
+
       try {
-        const cmsProducts = await fetchProductsFromCMS();
+        const cmsProducts = await fetchProductsFromCMS(language === 'fr' ? 'fr' : 'en');
         setProducts(cmsProducts);
         setCachedProducts(cmsProducts);
         setIsProductsLoading(false);
@@ -133,7 +134,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     loadProducts();
-  }, []);
+  }, [language]);
 
   // Helper to get products - use CMS data if available, otherwise static fallback
   const getProducts = (): Product[] => {

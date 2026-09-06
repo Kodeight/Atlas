@@ -600,8 +600,18 @@ export function getRelatedProducts(productId: string, category: string, limit = 
 const ADMIN_API_BASE = '/admin/api';
 let cmsProductsFetchAttempted = false;
 
-function mapAdminProductToStorefront(adminProd: any): Product {
+export type StoreLanguage = 'en' | 'fr';
+
+function pickLang(en: any, fr: any, lang: StoreLanguage): any {
+  if (lang === 'fr' && typeof fr === 'string' && fr.trim().length > 0) return fr;
+  return en;
+}
+
+function mapAdminProductToStorefront(adminProd: any, lang: StoreLanguage = 'en'): Product {
   const { id, name, description, price, image, stock, color } = adminProd;
+  const displayName = pickLang(name, adminProd.nameFr, lang);
+  const displayDescription = pickLang(description, adminProd.descriptionFr, lang);
+  const displayFlavor = pickLang(adminProd.flavor, adminProd.flavorFr, lang);
   const slug = name
     .toLowerCase()
     .replace(/[^\w\s-]/g, '')
@@ -622,16 +632,18 @@ function mapAdminProductToStorefront(adminProd: any): Product {
   if (color) {
     const colorName = color.replace('hsl(', '').replace(')', '').split(',')[0] || 'Default';
     colors = [{ name: colorName, hex: '#1F5742', imageIndex: 0 }];
+  } else if (displayFlavor) {
+    colors = [{ name: displayFlavor, hex: '#1F5742', imageIndex: 0 }];
   } else {
     colors = [{ name: 'Default', hex: '#1F5742', imageIndex: 0 }];
   }
   const primaryImage = image ? image : '/placeholder-product.webp';
   return {
     id,
-    name,
+    name: displayName,
     slug,
-    description,
-    shortDescription: description ? description.split('.')[0] + '.' : name,
+    description: displayDescription,
+    shortDescription: displayDescription ? displayDescription.split('.')[0] + '.' : displayName,
     category,
     categoryLabel: category,
     price,
@@ -651,19 +663,19 @@ function mapAdminProductToStorefront(adminProd: any): Product {
   };
 }
 
-export function mapAdminProductsToStorefront(adminProds: any[]): Product[] {
-  return adminProds.map(mapAdminProductToStorefront);
+export function mapAdminProductsToStorefront(adminProds: any[], lang: StoreLanguage = 'en'): Product[] {
+  return adminProds.map((p) => mapAdminProductToStorefront(p, lang));
 }
 
 let cachedDbProducts: Product[] | null = null;
 
-export async function fetchProductsFromCMS(): Promise<Product[]> {
+export async function fetchProductsFromCMS(lang: StoreLanguage = 'en'): Promise<Product[]> {
   try {
     const response = await fetch(`${ADMIN_API_BASE}/products`);
     if (!response.ok) throw new Error('Failed to fetch products from CMS');
     const adminProducts: any[] = await response.json();
     cmsProductsFetchAttempted = true;
-    const mapped = mapAdminProductsToStorefront(adminProducts);
+    const mapped = mapAdminProductsToStorefront(adminProducts, lang);
     if (mapped.length > 0) cachedDbProducts = mapped;
     return mapped.length > 0 ? mapped : PRODUCTS_DATA;
   } catch {

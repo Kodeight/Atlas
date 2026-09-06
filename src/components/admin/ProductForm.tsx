@@ -1,11 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Upload, X } from 'lucide-react';
+import { adminText, AdminLang } from './adminText';
 
 export interface AdminProduct {
   id: string;
   name: string;
+  nameFr?: string;
   flavor?: string;
+  flavorFr?: string;
   description: string;
+  descriptionFr?: string;
   price: number;
   image: string;
   stock: number;
@@ -15,8 +19,11 @@ export interface AdminProduct {
 
 export interface ProductFormValue {
   name: string;
+  nameFr?: string;
   flavor: string;
+  flavorFr?: string;
   description: string;
+  descriptionFr?: string;
   price: number;
   image: string;
   stock: number;
@@ -24,15 +31,31 @@ export interface ProductFormValue {
 
 interface ProductFormProps {
   product?: AdminProduct | null;
+  lang: AdminLang;
   onSubmit: (value: ProductFormValue) => Promise<void>;
   onCancel: () => void;
   saving: boolean;
 }
 
-const emptyForm: ProductFormValue = {
+interface FormState {
+  name: string;
+  nameFr: string;
+  flavor: string;
+  flavorFr: string;
+  description: string;
+  descriptionFr: string;
+  price: number;
+  image: string;
+  stock: number;
+}
+
+const emptyForm: FormState = {
   name: '',
+  nameFr: '',
   flavor: '',
+  flavorFr: '',
   description: '',
+  descriptionFr: '',
   price: 0,
   image: '',
   stock: 0,
@@ -41,8 +64,11 @@ const emptyForm: ProductFormValue = {
 const inputClass =
   'w-full px-4 py-3 border border-[#E7E3DA] rounded-lg bg-[#FCFBF7] text-sm text-[#151515] font-sans-ui outline-none transition-colors focus:border-[#1F5742] placeholder:text-[#6D6D6D]/60';
 
-export const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onCancel, saving }) => {
-  const [form, setForm] = useState<ProductFormValue>(emptyForm);
+const blankToUndefined = (v: string) => (v.trim().length > 0 ? v.trim() : undefined);
+
+export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, onSubmit, onCancel, saving }) => {
+  const t = adminText[lang];
+  const [form, setForm] = useState<FormState>(emptyForm);
   const [outOfStock, setOutOfStock] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -52,8 +78,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onC
     if (product) {
       setForm({
         name: product.name,
+        nameFr: product.nameFr || '',
         flavor: product.flavor || '',
+        flavorFr: product.flavorFr || '',
         description: product.description,
+        descriptionFr: product.descriptionFr || '',
         price: product.price,
         image: product.image,
         stock: product.stock,
@@ -66,14 +95,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onC
     setError(null);
   }, [product]);
 
-  const set = (field: keyof ProductFormValue, value: string | number) => {
+  const set = (field: keyof FormState, value: string | number) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
   const handleFile = (file: File | undefined) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      setError('Please choose an image file (PNG, JPG or WebP).');
+      setError(t.eFile);
       return;
     }
     const reader = new FileReader();
@@ -88,29 +117,33 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onC
     e.preventDefault();
     setError(null);
     if (form.name.trim().length < 3) {
-      setError('Product name must be at least 3 characters.');
+      setError(t.eName);
       return;
     }
     if (form.description.trim().length < 10) {
-      setError('Description must be at least 10 characters.');
+      setError(t.eDesc);
       return;
     }
     if (!(form.price > 0)) {
-      setError('Price must be greater than 0.');
+      setError(t.ePrice);
       return;
     }
     if (!form.image.trim()) {
-      setError('An image URL or upload is required.');
+      setError(t.eImage);
       return;
     }
     if (!Number.isInteger(form.stock) || form.stock < 0) {
-      setError('Stock must be a whole number of 0 or more.');
+      setError(t.eStock);
       return;
     }
     await onSubmit({
-      ...form,
       name: form.name.trim(),
+      nameFr: blankToUndefined(form.nameFr),
+      flavor: form.flavor.trim(),
+      flavorFr: blankToUndefined(form.flavorFr),
       description: form.description.trim(),
+      descriptionFr: blankToUndefined(form.descriptionFr),
+      price: form.price,
       image: form.image.trim(),
       stock: outOfStock ? 0 : form.stock,
     });
@@ -123,7 +156,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onC
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-medium text-[#151515]">
-          Product name
+          {t.fNameEn}
           <input
             value={form.name}
             onChange={(e) => set('name', e.target.value)}
@@ -132,7 +165,19 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onC
           />
         </label>
         <label className="block text-sm font-medium text-[#151515]">
-          Flavor / tag
+          {t.fNameFr}
+          <input
+            value={form.nameFr}
+            onChange={(e) => set('nameFr', e.target.value)}
+            className={`${inputClass} mt-2`}
+            placeholder="ex. Blazer fluide"
+          />
+        </label>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block text-sm font-medium text-[#151515]">
+          {t.fTagEn}
           <input
             value={form.flavor}
             onChange={(e) => set('flavor', e.target.value)}
@@ -140,11 +185,20 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onC
             placeholder="e.g. Signature"
           />
         </label>
+        <label className="block text-sm font-medium text-[#151515]">
+          {t.fTagFr}
+          <input
+            value={form.flavorFr}
+            onChange={(e) => set('flavorFr', e.target.value)}
+            className={`${inputClass} mt-2`}
+            placeholder="ex. Signature"
+          />
+        </label>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-medium text-[#151515]">
-          Price (DA)
+          {t.fPrice}
           <input
             type="number"
             min={0}
@@ -156,7 +210,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onC
           />
         </label>
         <label className="block text-sm font-medium text-[#151515]">
-          Stock
+          {t.fStock}
           <input
             type="number"
             min={0}
@@ -172,12 +226,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onC
 
       <div>
         <label className="block text-sm font-medium text-[#151515]">
-          Image URL or upload
+          {t.fImage}
           <input
             value={form.image.startsWith('data:') ? '' : form.image}
             onChange={(e) => set('image', e.target.value)}
             className={`${inputClass} mt-2`}
-            placeholder="Paste an image URL or upload below"
+            placeholder={t.fImagePh}
           />
         </label>
         <div
@@ -202,27 +256,27 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onC
             <div className="flex items-center justify-center gap-4">
               <img src={form.image} alt="Preview" className="h-20 w-20 rounded-lg object-cover border border-[#E7E3DA]" />
               <div className="text-left">
-                <div className="text-sm font-medium text-[#151515]">Image ready</div>
+                <div className="text-sm font-medium text-[#151515]">{t.fImageReady}</div>
                 <button
                   type="button"
                   onClick={() => set('image', '')}
                   className="mt-1 inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
                 >
-                  <X className="w-3.5 h-3.5" /> Remove
+                  <X className="w-3.5 h-3.5" /> {t.fRemove}
                 </button>
               </div>
             </div>
           ) : (
             <div>
               <Upload className="w-6 h-6 mx-auto text-[#1F5742]" />
-              <div className="mt-2 text-sm font-medium text-[#151515]">Drag and drop an image here</div>
-              <div className="text-xs text-[#6D6D6D] mt-1">or</div>
+              <div className="mt-2 text-sm font-medium text-[#151515]">{t.fDragTitle}</div>
+              <div className="text-xs text-[#6D6D6D] mt-1">{t.fDragOr}</div>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="mt-2 px-4 py-2 rounded-lg bg-[#1F5742] text-white text-sm font-medium hover:bg-[#164030] transition-colors"
               >
-                Choose file
+                {t.fChoose}
               </button>
               <input
                 ref={fileInputRef}
@@ -231,22 +285,34 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onC
                 onChange={(e) => handleFile(e.target.files?.[0])}
                 className="hidden"
               />
-              <div className="mt-2 text-xs text-[#6D6D6D]">PNG, JPG or WebP</div>
+              <div className="mt-2 text-xs text-[#6D6D6D]">{t.fFormats}</div>
             </div>
           )}
         </div>
       </div>
 
-      <label className="block text-sm font-medium text-[#151515]">
-        Description
-        <textarea
-          value={form.description}
-          onChange={(e) => set('description', e.target.value)}
-          rows={4}
-          className={`${inputClass} mt-2 resize-y`}
-          placeholder="Write the product description here"
-        />
-      </label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block text-sm font-medium text-[#151515]">
+          {t.fDescEn}
+          <textarea
+            value={form.description}
+            onChange={(e) => set('description', e.target.value)}
+            rows={4}
+            className={`${inputClass} mt-2 resize-y`}
+            placeholder="Write the product description here"
+          />
+        </label>
+        <label className="block text-sm font-medium text-[#151515]">
+          {t.fDescFr}
+          <textarea
+            value={form.descriptionFr}
+            onChange={(e) => set('descriptionFr', e.target.value)}
+            rows={4}
+            className={`${inputClass} mt-2 resize-y`}
+            placeholder="Écrivez la description ici"
+          />
+        </label>
+      </div>
 
       <label className="flex items-center gap-3 text-sm font-medium text-[#151515] cursor-pointer">
         <input
@@ -255,7 +321,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onC
           onChange={(e) => setOutOfStock(e.target.checked)}
           className="w-5 h-5 rounded accent-[#1F5742] cursor-pointer"
         />
-        Mark as out of stock
+        {t.fOos}
       </label>
 
       <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
@@ -264,14 +330,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onC
           onClick={onCancel}
           className="px-5 py-3 rounded-lg border border-[#E7E3DA] text-sm font-medium text-[#151515] hover:bg-[#F7F3EA] transition-colors"
         >
-          Cancel
+          {t.fCancel}
         </button>
         <button
           type="submit"
           disabled={saving}
           className="px-5 py-3 rounded-lg bg-[#1F5742] text-white text-sm font-medium hover:bg-[#164030] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {saving ? 'Saving…' : product ? 'Update product' : 'Add product'}
+          {saving ? t.fSaving : product ? t.fUpdate : t.fAdd}
         </button>
       </div>
     </form>

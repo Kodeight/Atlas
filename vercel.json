@@ -1,6 +1,18 @@
 {
   "rewrites": [
     {
+      "source": "/admin/api/products/:id",
+      "destination": "/api/admin/products?id=:id"
+    },
+    {
+      "source": "/admin/api/users/:id",
+      "destination": "/api/admin/users?id=:id"
+    },
+    {
+      "source": "/admin/api/orders/:id/status",
+      "destination": "/api/admin/orders?id=:id"
+    },
+    {
       "source": "/admin/api/:path*",
       "destination": "/api/admin/:path*"
     },

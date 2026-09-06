@@ -7,7 +7,7 @@ interface LoginCredentials {
 }
 
 const LoginPage: React.FC = () => {
-  const { navigate, language, showToast } = useShop();
+  const { navigate, language, setLanguage, showToast } = useShop();
   const [credentials, setCredentials] = useState<LoginCredentials>({
     email: '',
     password: '',
@@ -75,6 +75,24 @@ const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F7F3EA] text-[#151515] px-4">
       <div className="bg-white w-full max-w-[440px] p-8 sm:p-10 rounded-xl shadow-xl border border-[#E7E3DA]">
+        <div className="flex justify-end mb-2">
+          <div className="flex items-center rounded-full border border-[#E7E3DA] p-0.5 text-[11px] font-semibold font-sans-ui">
+            <button
+              type="button"
+              onClick={() => setLanguage('en')}
+              className={`px-2.5 py-1 rounded-full transition-colors ${language !== 'fr' ? 'bg-[#1F5742] text-white' : 'text-[#6D6D6D]'}`}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage('fr')}
+              className={`px-2.5 py-1 rounded-full transition-colors ${language === 'fr' ? 'bg-[#1F5742] text-white' : 'text-[#6D6D6D]'}`}
+            >
+              FR
+            </button>
+          </div>
+        </div>
         <div className="flex flex-col items-center mb-6">
           <img
             src="https://atlasdz.ifree.page/wp-content/uploads/2026/07/ATLAS-logo-2.png"

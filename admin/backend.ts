@@ -17,6 +17,11 @@ try {
     products: new Map<string, any>(),
     orders: new Map<string, any>(),
     orderItems: new Map<string, any>(),
+    companies: new Map<string, any>([
+      ["fb-comp-1", { id: "fb-comp-1", name: "Yalidine", active: true, createdAt: new Date() }],
+      ["fb-comp-2", { id: "fb-comp-2", name: "ZR Express", active: true, createdAt: new Date() }],
+      ["fb-comp-3", { id: "fb-comp-3", name: "Maestro", active: true, createdAt: new Date() }],
+    ]),
   };
   prisma = {
     adminUser: {
@@ -47,10 +52,29 @@ try {
       update: async ({ where, data }: any) => { const p = store.products.get(where.id); if (p) Object.assign(p, data); return p; },
       delete: async ({ where }: any) => { store.products.delete(where.id); },
     },
+    shippingCompany: {
+      count: async () => store.companies.size,
+      findMany: async () => Array.from(store.companies.values()),
+      findUnique: async ({ where }: any) => {
+        if (where.id) return store.companies.get(where.id) || null;
+        if (where.name) return Array.from(store.companies.values()).find((c: any) => c.name === where.name) || null;
+        return null;
+      },
+      create: async ({ data }: any) => { const c = { ...data, id: data.id || `comp-${Date.now()}`, createdAt: new Date() }; store.companies.set(c.id, c); return c; },
+      createMany: async ({ data }: any) => {
+        data.forEach((d: any, i: number) => {
+          const id = `comp-seed-${Date.now()}-${i}`;
+          store.companies.set(id, { ...d, id, createdAt: new Date() });
+        });
+        return { count: data.length };
+      },
+      update: async ({ where, data }: any) => { const c = store.companies.get(where.id); if (c) Object.assign(c, data); return c; },
+      delete: async ({ where }: any) => { store.companies.delete(where.id); },
+    },
     order: {
       create: async ({ data, include }: any) => {
         const id = `order-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-        const order: any = { id, customerName: data.customerName, phone: data.phone, address: data.address, total: data.total, status: data.status, date: data.date, items: [] };
+        const order: any = { id, customerName: data.customerName, phone: data.phone, address: data.address, total: data.total, status: data.status, shippingCompany: data.shippingCompany ?? null, deliveryType: data.deliveryType ?? 'home', date: data.date, items: [] };
         if (data.items?.create) {
           for (const it of data.items.create) {
             const itemId = `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -73,7 +97,11 @@ try {
       },
       update: async ({ where, data, include }: any) => {
         const o = store.orders.get(where.id);
-        if (o) o.status = data.status;
+        if (o) {
+          if (data.status !== undefined) o.status = data.status;
+          if (data.shippingCompany !== undefined) o.shippingCompany = data.shippingCompany;
+          if (data.deliveryType !== undefined) o.deliveryType = data.deliveryType;
+        }
         return { ...o, items: Array.from(store.orderItems.values()).filter((it: any) => it.orderId === where.id), date: o.date };
       },
     },
@@ -178,7 +206,10 @@ const COOKIE_OPTIONS = {
 
 const productSchema = z.object({
   name: z.string().min(3).max(120),
+  nameFr: z.string().min(1).max(120).optional(),
   flavor: z.string().min(2).max(100).optional(),
+  flavorFr: z.string().min(1).max(100).optional(),
+  descriptionFr: z.string().min(1).max(1000).optional(),
   description: z.string().min(10).max(1000),
   price: z.number().positive(),
   image: z.string().min(1).refine(isValidImagePath, {
@@ -206,6 +237,21 @@ const orderSchema = z.object({
 
 const statusSchema = z.object({
   status: z.enum(["pending", "processing", "delivered"]),
+});
+
+const orderPatchSchema = z
+  .object({
+    status: z.enum(["pending", "processing", "delivered"]).optional(),
+    company: z.string().max(100).optional(),
+    deliveryType: z.enum(["home", "stopdesk"]).optional(),
+  })
+  .refine((d) => d.status !== undefined || d.company !== undefined || d.deliveryType !== undefined, {
+    message: "Nothing to update.",
+  });
+
+const companySchema = z.object({
+  name: z.string().min(2).max(100),
+  active: z.boolean().optional(),
 });
 
 export type ProductAdmin = z.infer<typeof productSchema> & { id: string };
@@ -327,6 +373,17 @@ function unauthorized(res: Response) {
   return res.status(401).json({ message: "Unauthorized access" });
 }
 
+const DEFAULT_SHIPPING_COMPANIES = ["Yalidine", "ZR Express", "Maestro"];
+
+async function ensureShippingCompanies() {
+  const count = await prisma.shippingCompany.count();
+  if (count === 0) {
+    await prisma.shippingCompany.createMany({
+      data: DEFAULT_SHIPPING_COMPANIES.map((name) => ({ name, active: true })),
+    });
+  }
+}
+
 async function ensureAdminUser() {
   const ADMIN_EMAIL = "admin@atlas.dz";
   const existing = await prisma.adminUser.findUnique({ where: { email: ADMIN_EMAIL } });
@@ -345,7 +402,7 @@ async function ensureAdminUser() {
 
 export function createAdminRouter() {
   const router = express.Router();
-  void Promise.all([ensureAdminUser(), seedInitialProducts()]).catch((error) => {
+  void Promise.all([ensureAdminUser(), seedInitialProducts(), ensureShippingCompanies()]).catch((error) => {
     console.error("Failed to initialize admin backend:", error);
   });
 
@@ -415,6 +472,8 @@ export function createAdminRouter() {
     }
 
     const { customerName, phone, address, items, total } = parsed.data;
+    const company = typeof req.body.company === "string" ? req.body.company.slice(0, 100) : undefined;
+    const deliveryType = req.body.deliveryType === "stopdesk" ? "stopdesk" : undefined;
 
     try {
       // Validate stock availability
@@ -435,6 +494,8 @@ export function createAdminRouter() {
           address,
           total,
           status: "pending",
+          ...(company ? { shippingCompany: company } : {}),
+          ...(deliveryType ? { deliveryType } : {}),
           date: new Date(),
           items: {
             create: items.map((item) => ({
@@ -455,6 +516,11 @@ export function createAdminRouter() {
     } catch (error) {
       return res.status(500).json({ message: "Failed to create order." });
     }
+  });
+
+  router.get("/companies", async (_req: Request, res: Response) => {
+    const companies = await prisma.shippingCompany.findMany({ orderBy: { createdAt: "asc" } });
+    return res.json(companies);
   });
 
   router.use((req: Request, res: Response, next: NextFunction) => {
@@ -629,7 +695,7 @@ export function createAdminRouter() {
   });
 
   router.patch("/orders/:id/status", async (req: Request, res: Response) => {
-    const parsed = statusSchema.safeParse(req.body);
+    const parsed = orderPatchSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ message: parsed.error.errors[0].message });
     }
@@ -644,9 +710,14 @@ export function createAdminRouter() {
       return res.status(404).json({ message: "Order not found." });
     }
 
+    const data: { status?: string; shippingCompany?: string | null; deliveryType?: string } = {};
+    if (parsed.data.status !== undefined) data.status = parsed.data.status;
+    if (parsed.data.company !== undefined) data.shippingCompany = parsed.data.company || null;
+    if (parsed.data.deliveryType !== undefined) data.deliveryType = parsed.data.deliveryType;
+
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
-      data: { status: parsed.data.status },
+      data,
       include: { items: true },
     });
 
@@ -654,6 +725,72 @@ export function createAdminRouter() {
       ...updatedOrder,
       date: updatedOrder.date.toISOString(),
     });
+  });
+
+  router.post("/companies", async (req: Request, res: Response) => {
+    const parsed = companySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: parsed.error.errors[0].message });
+    }
+    const name = parsed.data.name.trim();
+    const existing = await prisma.shippingCompany.findUnique({ where: { name } });
+    if (existing) {
+      return res.status(400).json({ message: "This company already exists." });
+    }
+    const created = await prisma.shippingCompany.create({
+      data: { name, active: parsed.data.active ?? true },
+    });
+    return res.status(201).json(created);
+  });
+
+  router.patch("/companies/:id", async (req: Request, res: Response) => {
+    const companyId = getRouteParamId(req.params.id);
+    if (!companyId) {
+      return res.status(400).json({ message: "Company id is required." });
+    }
+    const parsed = z
+      .object({
+        name: z.string().min(2).max(100).optional(),
+        active: z.boolean().optional(),
+      })
+      .refine((d) => d.name !== undefined || d.active !== undefined, {
+        message: "Nothing to update.",
+      })
+      .safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: parsed.error.errors[0].message });
+    }
+    const existing = await prisma.shippingCompany.findUnique({ where: { id: companyId } });
+    if (!existing) {
+      return res.status(404).json({ message: "Company not found." });
+    }
+    if (parsed.data.name !== undefined) {
+      const nameTaken = await prisma.shippingCompany.findUnique({ where: { name: parsed.data.name.trim() } });
+      if (nameTaken && nameTaken.id !== companyId) {
+        return res.status(400).json({ message: "This company already exists." });
+      }
+    }
+    const updated = await prisma.shippingCompany.update({
+      where: { id: companyId },
+      data: {
+        ...(parsed.data.name !== undefined ? { name: parsed.data.name.trim() } : {}),
+        ...(parsed.data.active !== undefined ? { active: parsed.data.active } : {}),
+      },
+    });
+    return res.json(updated);
+  });
+
+  router.delete("/companies/:id", async (req: Request, res: Response) => {
+    const companyId = getRouteParamId(req.params.id);
+    if (!companyId) {
+      return res.status(400).json({ message: "Company id is required." });
+    }
+    const existing = await prisma.shippingCompany.findUnique({ where: { id: companyId } });
+    if (!existing) {
+      return res.status(404).json({ message: "Company not found." });
+    }
+    await prisma.shippingCompany.delete({ where: { id: companyId } });
+    return res.json({ success: true });
   });
 
   return router;
