@@ -5,6 +5,8 @@ import { LogOut, Menu, Download, Package, Pencil, Plus, ShoppingCart, Trash2, Us
 import { ProductForm, AdminProduct, ProductFormValue } from '../components/admin/ProductForm';
 import { adminText } from '../components/admin/adminText';
 import { downloadOrdersCsv } from '../components/admin/ordersCsv';
+import { SettingsForm } from '../components/admin/SettingsForm';
+import { SITE_TITLE } from '../pageMeta';
 
 interface AdminUser {
   id: string;
@@ -57,6 +59,8 @@ const AdminPage: React.FC = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [companies, setCompanies] = useState<ShippingCompany[]>([]);
   const [companyName, setCompanyName] = useState('');
+  const [settings, setSettings] = useState<Record<string, any> | null>(null);
+  const [savingSettings, setSavingSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -94,16 +98,31 @@ const AdminPage: React.FC = () => {
   }, [notice]);
 
   const reload = async () => {
-    const [freshProducts, freshOrders, freshUsers, freshCompanies] = await Promise.all([
+    const [freshProducts, freshOrders, freshUsers, freshCompanies, freshSettings] = await Promise.all([
       adminApi('/products').catch(() => []),
       adminApi('/orders').catch(() => []),
       adminApi('/users').catch(() => []),
       adminApi('/companies').catch(() => []),
+      adminApi('/settings').catch(() => null),
     ]);
     setProducts(Array.isArray(freshProducts) ? freshProducts : []);
     setOrders(Array.isArray(freshOrders) ? freshOrders : []);
     setUsers(Array.isArray(freshUsers) ? freshUsers : []);
     setCompanies(Array.isArray(freshCompanies) ? freshCompanies : []);
+    if (freshSettings && typeof freshSettings === 'object') setSettings(freshSettings);
+  };
+
+  const handleSaveSettings = async (value: Record<string, any>) => {
+    setSavingSettings(true);
+    try {
+      const updated = await adminApi('/settings', { method: 'PUT', body: JSON.stringify(value) });
+      setSettings(updated);
+      showNotice('success', t.sSaved);
+    } catch (e) {
+      showNotice('error', e instanceof Error ? e.message : t.sLoadError);
+    } finally {
+      setSavingSettings(false);
+    }
   };
 
   useEffect(() => {
@@ -221,6 +240,24 @@ const AdminPage: React.FC = () => {
     };
   }, [sidebarOpen]);
 
+  useEffect(() => {
+    // Tab-aware admin title; MainRouter leaves /admin* titles to this page.
+    const tab =
+      activeTab === 'dashboard'
+        ? 'Dashboard'
+        : activeTab === 'products'
+          ? t.navProducts
+          : activeTab === 'orders'
+            ? t.navOrders
+            : activeTab === 'admins'
+              ? 'Admins'
+              : t.navSettings;
+    document.title = `${tab} — Atlas`;
+    return () => {
+      document.title = SITE_TITLE;
+    };
+  }, [activeTab, t]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F3EA] text-[#151515]">
@@ -251,7 +288,7 @@ const AdminPage: React.FC = () => {
       )}
       {/* Sidebar - Atlas Green #1F5742 with 25px radius on right; drawer on mobile */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 max-w-[85vw] shrink-0 bg-[#1F5742] text-white flex flex-col transition-transform duration-300 md:static md:z-auto md:max-w-none md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 max-w-[85vw] shrink-0 bg-[#1F5742] text-white flex flex-col transition-transform duration-300 md:sticky md:top-0 md:h-screen md:z-auto md:max-w-none md:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{
@@ -707,6 +744,30 @@ const AdminPage: React.FC = () => {
           )}
           {activeTab === 'settings' && (
             <div className="grid gap-4">
+              <SettingsForm value={settings} lang={language === 'fr' ? 'fr' : 'en'} saving={savingSettings} onSave={handleSaveSettings} />
+              <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
+                <h3 className="text-sm font-semibold text-[#151515] font-sans-ui">{t.setSystem}</h3>
+                <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm font-sans-ui">
+                  <div className="rounded-lg bg-[#F7F3EA] px-3 py-2">
+                    <div className="text-xs text-[#6D6D6D]">{t.sysEnv}</div>
+                    <div className="font-medium text-[#151515]">
+                      {/^(localhost|127\.0\.0\.1)/.test(window.location.hostname) ? 'Development' : 'Production'}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-[#F7F3EA] px-3 py-2">
+                    <div className="text-xs text-[#6D6D6D]">{t.sysDb}</div>
+                    <div className="font-medium text-[#151515]">PostgreSQL</div>
+                  </div>
+                  <div className="rounded-lg bg-[#F7F3EA] px-3 py-2">
+                    <div className="text-xs text-[#6D6D6D]">{t.sysProducts}</div>
+                    <div className="font-medium text-[#151515]">{products.length}</div>
+                  </div>
+                  <div className="rounded-lg bg-[#F7F3EA] px-3 py-2">
+                    <div className="text-xs text-[#6D6D6D]">{t.sysOrders}</div>
+                    <div className="font-medium text-[#151515]">{orders.length}</div>
+                  </div>
+                </div>
+              </div>
               <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
                 <h3 className="text-sm font-semibold text-[#151515] font-sans-ui">{t.shipTitle}</h3>
                 <p className="text-xs text-[#6D6D6D] mt-1 font-sans-ui">{t.shipSub}</p>

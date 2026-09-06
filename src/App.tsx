@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 import { ShopProvider, useShop } from './context/ShopContext';
+import { applyPageMeta, getPageTitle } from './pageMeta';
+import { getProductBySlug } from './data/products';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
@@ -22,19 +24,21 @@ import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
 
 const MainRouter: React.FC = () => {
-  const { currentPath } = useShop();
+  const { currentPath, language, products } = useShop();
 
-  // Scroll to top + keep the browser tab title in sync with the route
+  // Scroll to top + keep the browser tab title (and product meta) in sync.
+  // Re-runs when products load so async product data updates the title.
+  // /admin* titles are owned by AdminPage (tab-aware) — getPageTitle returns null there.
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (currentPath === '/admin' || currentPath.startsWith('/admin/')) {
-      document.title = 'Atlas Admin — Dashboard';
-    } else if (currentPath === '/login') {
-      document.title = 'Atlas Admin — Login';
-    } else {
-      document.title = 'Atlas — Fashion & Clothing';
+    const title = getPageTitle(currentPath, language, (slug) => getProductBySlug(slug));
+    let description: string | undefined;
+    if (title !== null && currentPath.startsWith('/product/')) {
+      const slug = currentPath.replace('/product/', '').split('?')[0];
+      description = slug ? getProductBySlug(slug)?.shortDescription : undefined;
     }
-  }, [currentPath]);
+    applyPageMeta(title, description);
+  }, [currentPath, language, products]);
 
   // Route matching
   if (currentPath === '/' || currentPath === '') {
