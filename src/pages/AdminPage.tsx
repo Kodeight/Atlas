@@ -163,6 +163,14 @@ const AdminPage: React.FC = () => {
     navigate('/login');
   };
 
+  useEffect(() => {
+    // Lock body scroll while the mobile drawer is open
+    document.body.style.overflow = sidebarOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [sidebarOpen]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F3EA] text-[#151515]">
@@ -180,14 +188,6 @@ const AdminPage: React.FC = () => {
     { id: 'admins', label: 'Admins', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
   ] as const;
-
-  useEffect(() => {
-    // Lock body scroll while the mobile drawer is open
-    document.body.style.overflow = sidebarOpen ? 'hidden' : '';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [sidebarOpen]);
 
   return (
     <div className="min-h-screen flex bg-[#F7F3EA] font-sans-ui">

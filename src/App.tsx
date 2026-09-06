@@ -24,9 +24,16 @@ import AdminPage from './pages/AdminPage';
 const MainRouter: React.FC = () => {
   const { currentPath } = useShop();
 
-  // Scroll to top on path change
+  // Scroll to top + keep the browser tab title in sync with the route
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (currentPath === '/admin' || currentPath.startsWith('/admin/')) {
+      document.title = 'Atlas Admin — Dashboard';
+    } else if (currentPath === '/login') {
+      document.title = 'Atlas Admin — Login';
+    } else {
+      document.title = 'Atlas — Fashion & Clothing';
+    }
   }, [currentPath]);
 
   // Route matching

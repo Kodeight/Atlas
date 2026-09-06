@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
 import { Language, TRANSLATIONS, detectBrowserLanguage } from '../i18n/translations';
 import { fetchProductsFromCMS, hasFetchedFromCMS, mapAdminProductsToStorefront, getAllAtlasProductsFallback, setCachedProducts } from '../data/products';
 import { Product, CartItem, ProductColor } from '../types';
@@ -143,13 +143,13 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return getAllAtlasProductsFallback();
   };
 
-  const navigate = (path: string) => {
+  const navigate = useCallback((path: string) => {
     if (path !== window.location.pathname) {
       window.history.pushState({}, '', path);
       setCurrentPath(path);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  };
+  }, []);
 
   // Current path tracking
   const [currentPath, setCurrentPath] = useState<string>(() => {
