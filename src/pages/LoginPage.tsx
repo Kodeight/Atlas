@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 
 interface LoginCredentials {
@@ -14,21 +15,28 @@ const LoginPage: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    // If already authenticated, redirect to admin dashboard
+    // If already authenticated, redirect to admin dashboard.
+    // A 401 here is the expected logged-out state: handle it silently
+    // (no console error, no rejection). Only genuine failures are logged.
     const checkAuth = async () => {
+      let response: Response;
       try {
-        const response = await fetch('/admin/api/auth/me', {
+        response = await fetch('/admin/api/auth/me', {
           credentials: 'include',
         });
-        if (response.ok) {
-          const user = await response.json();
-          navigate('/admin');
-        }
-      } catch {
-        // Not authenticated, continue
+      } catch (networkError) {
+        console.error('Auth check failed: network error.', networkError);
+        return;
       }
+      if (response.status === 401) return;
+      if (!response.ok) {
+        console.error(`Auth check failed: unexpected status ${response.status}.`);
+        return;
+      }
+      navigate('/admin');
     };
 
     checkAuth();
@@ -78,11 +86,11 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-[#F7F3EA] text-[#151515] px-4 py-10">
       <div className="bg-white w-full max-w-[400px] p-8 sm:p-10 rounded-2xl shadow-[0_24px_60px_-24px_rgba(31,87,66,0.25)] border border-[#E7E3DA]">
         <div className="flex flex-col items-center mb-8">
-          <span className="flex items-center justify-center w-16 h-16 rounded-2xl bg-[#1F5742]/5 border border-[#E7E3DA] mb-4">
+          <span className="flex items-center justify-center w-20 h-20 rounded-2xl overflow-hidden bg-[#1F5742]/5 border border-[#E7E3DA] mb-4 p-2.5">
             <img
               src="https://atlasdz.ifree.page/wp-content/uploads/2026/07/ATLAS-logo-2.png"
               alt="Atlas"
-              className="w-10 h-10 object-contain"
+              className="w-full h-full object-contain object-center"
               loading="eager"
             />
           </span>
@@ -133,18 +141,45 @@ const LoginPage: React.FC = () => {
             <label htmlFor="admin-password" className="block text-sm font-medium text-[#151515] font-sans-ui mb-2">
               {language === 'fr' ? 'Mot de passe' : 'Password'}
             </label>
-            <input
-              id="admin-password"
-              type="password"
-              autoComplete="current-password"
-              value={credentials.password}
-              onChange={(e) =>
-                setCredentials({ ...credentials, password: e.target.value })
-              }
-              required
-              className="w-full px-4 py-3 border border-[#E7E3DA] rounded-xl bg-[#FCFBF7] font-sans-ui focus:outline-none focus:border-[#1F5742] focus:ring-2 focus:ring-[#1F5742]/20 transition"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                id="admin-password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                value={credentials.password}
+                onChange={(e) =>
+                  setCredentials({ ...credentials, password: e.target.value })
+                }
+                required
+                className="w-full pl-4 pr-12 py-3 border border-[#E7E3DA] rounded-xl bg-[#FCFBF7] font-sans-ui focus:outline-none focus:border-[#1F5742] focus:ring-2 focus:ring-[#1F5742]/20 transition"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={
+                  showPassword
+                    ? language === 'fr'
+                      ? 'Masquer le mot de passe'
+                      : 'Hide password'
+                    : language === 'fr'
+                      ? 'Afficher le mot de passe'
+                      : 'Show password'
+                }
+                title={
+                  showPassword
+                    ? language === 'fr'
+                      ? 'Masquer le mot de passe'
+                      : 'Hide password'
+                    : language === 'fr'
+                      ? 'Afficher le mot de passe'
+                      : 'Show password'
+                }
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-[#6D6D6D] hover:text-[#1F5742] hover:bg-[#F7F3EA] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1F5742]/40 transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           <button
