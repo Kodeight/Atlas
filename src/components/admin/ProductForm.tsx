@@ -389,7 +389,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, categor
             <input type="number" min={0} step={0.01} value={form.price || ''} onChange={(e) => set('price', e.target.value ? Number(e.target.value) : 0)} className={`${inputClass} mt-2`} placeholder="0" />
           </label>
         </div>
-        <div className="rounded-lg border border-[#E7E3DA] bg-[#FCFBF7] p-4 space-y-3">
+        <div className="rounded-lg border border-[#E7E3DA] bg-[#FCFBF7] p-4 mt-6 space-y-3">
           <label className="flex items-center gap-3 text-sm font-medium text-[#151515] cursor-pointer">
             <input
               type="checkbox"

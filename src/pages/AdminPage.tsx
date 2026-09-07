@@ -99,6 +99,8 @@ const AdminPage: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkWorking, setBulkWorking] = useState(false);
   const [userForm, setUserForm] = useState({ name: '', email: '', password: '' });
 
   useEffect(() => {
@@ -244,6 +246,52 @@ const AdminPage: React.FC = () => {
       showNotice('error', friendlyError(t, e, t.nErrSave));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const allVisibleSelected = products.length > 0 && selectedIds.length === products.length;
+  const someSelected = selectedIds.length > 0 && !allVisibleSelected;
+
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => (prev.length === products.length ? [] : products.map((p) => p.id)));
+  };
+
+  const handleBulkNewArrivals = async (isNew: boolean) => {
+    const targets = products.filter((p) => selectedIds.includes(p.id));
+    if (targets.length === 0) return;
+    setBulkWorking(true);
+    let ok = 0;
+    for (const p of targets) {
+      try {
+        await adminApi(`/products/${p.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            image: p.image,
+            stock: p.stock,
+            isNew,
+          }),
+        });
+        ok++;
+      } catch {
+        // collected below
+      }
+    }
+    setBulkWorking(false);
+    setSelectedIds([]);
+    await reload();
+    if (ok === targets.length) {
+      showNotice('success', (isNew ? t.nBulkNew : t.nBulkUnnew).replace('{n}', String(ok)));
+    } else if (ok > 0) {
+      showNotice('error', t.nBulkPartial.replace('{ok}', String(ok)).replace('{n}', String(targets.length)));
+    } else {
+      showNotice('error', t.nBulkFailed);
     }
   };
 
@@ -594,10 +642,50 @@ const AdminPage: React.FC = () => {
                 <div className="px-5 py-4 border-b border-[#E7E3DA]">
                   <h3 className="text-sm font-semibold font-sans-ui">{t.cardProducts} ({products.length})</h3>
                 </div>
+                {selectedIds.length > 0 && (
+                  <div className="px-4 py-3 border-b border-[#E7E3DA] bg-[#F7F3EA] flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-medium text-[#151515] font-sans-ui mr-1">
+                      {selectedIds.length} {t.bulkSelected}
+                    </span>
+                    <button
+                      onClick={() => handleBulkNewArrivals(true)}
+                      disabled={bulkWorking}
+                      className="px-3 py-1.5 rounded-lg bg-[#1F5742] text-white text-xs font-medium hover:bg-[#164030] transition-colors disabled:opacity-60"
+                    >
+                      {t.bulkAddNew}
+                    </button>
+                    <button
+                      onClick={() => handleBulkNewArrivals(false)}
+                      disabled={bulkWorking}
+                      className="px-3 py-1.5 rounded-lg border border-[#E7E3DA] bg-white text-xs font-medium text-[#151515] hover:bg-[#F7F3EA] transition-colors disabled:opacity-60"
+                    >
+                      {t.bulkRemoveNew}
+                    </button>
+                    <button
+                      onClick={() => setSelectedIds([])}
+                      disabled={bulkWorking}
+                      className="px-3 py-1.5 text-xs font-medium text-[#6D6D6D] hover:text-[#151515] transition-colors disabled:opacity-60"
+                    >
+                      {t.bulkClear}
+                    </button>
+                  </div>
+                )}
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-xs text-[#6D6D6D] border-b border-[#E7E3DA] bg-[#FCFBF7]">
+                        <th className="px-4 py-2 w-10">
+                          <input
+                            type="checkbox"
+                            checked={allVisibleSelected}
+                            ref={(el) => {
+                              if (el) el.indeterminate = someSelected;
+                            }}
+                            onChange={toggleSelectAll}
+                            aria-label={t.bulkSelectAll}
+                            className="w-4 h-4 rounded accent-[#1F5742] cursor-pointer align-middle"
+                          />
+                        </th>
                         <th className="text-left px-4 py-2 font-medium">{t.thProduct}</th>
                         <th className="text-left px-4 py-2 font-medium">{t.thPrice}</th>
                         <th className="text-left px-4 py-2 font-medium">{t.thStock}</th>
@@ -607,6 +695,15 @@ const AdminPage: React.FC = () => {
                     <tbody>
                       {products.map((p) => (
                         <tr key={p.id} className="border-b border-[#E7E3DA]/60 hover:bg-[#F7F3EA]">
+                          <td className="px-4 py-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(p.id)}
+                              onChange={() => toggleOne(p.id)}
+                              aria-label={p.name}
+                              className="w-4 h-4 rounded accent-[#1F5742] cursor-pointer align-middle"
+                            />
+                          </td>
                           <td className="px-4 py-2">
                             <div className="flex items-center gap-3">
                               <img
@@ -678,7 +775,7 @@ const AdminPage: React.FC = () => {
                       ))}
                       {products.length === 0 && (
                         <tr>
-                          <td colSpan={4} className="px-4 py-8 text-center text-sm text-[#6D6D6D]">
+                          <td colSpan={5} className="px-4 py-8 text-center text-sm text-[#6D6D6D]">
                             {t.productsEmpty}
                           </td>
                         </tr>
