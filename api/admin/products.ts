@@ -70,7 +70,17 @@ const REL_INCLUDE = {
   colors: { orderBy: { position: 'asc' as const } },
   sizes: { orderBy: { position: 'asc' as const } },
   images: { orderBy: { position: 'asc' as const } },
+  category: { select: { id: true, name: true, nameFr: true, slug: true } },
 };
+
+async function resolveCategoryId(prisma: any, categoryId: unknown): Promise<string | null | undefined> {
+  if (categoryId === undefined) return undefined;
+  if (categoryId === null || categoryId === '') return null;
+  if (typeof categoryId !== 'string') throw new Error('bad-category');
+  const category = await prisma.category.findUnique({ where: { id: categoryId } });
+  if (!category) throw new Error('bad-category');
+  return category.id;
+}
 
 async function saveRelations(prisma: any, productId: string, body: any) {
   await prisma.$transaction(async (tx: any) => {
@@ -164,7 +174,16 @@ export default async function handler(req: any, res: any) {
         if (err) return res.status(400).json({ message: err });
         const existing = await prisma.product.findUnique({ where: { id: qid } });
         if (!existing) return res.status(404).json({ message: 'Product not found.' });
-        await prisma.product.update({ where: { id: qid }, data: pickWritable(req.body) });
+        let categoryId: string | null | undefined;
+        try {
+          categoryId = await resolveCategoryId(prisma, req.body.categoryId);
+        } catch {
+          return res.status(400).json({ message: 'Category not found.' });
+        }
+        await prisma.product.update({
+          where: { id: qid },
+          data: { ...pickWritable(req.body), ...(categoryId !== undefined ? { categoryId } : {}) },
+        });
         await saveRelations(prisma, qid, req.body);
         const updated = await prisma.product.findUnique({ where: { id: qid }, include: REL_INCLUDE });
         return res.status(200).json(updated);
@@ -191,6 +210,12 @@ export default async function handler(req: any, res: any) {
       const err = badBody(req.body);
       if (err) return res.status(400).json({ message: err });
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      let categoryId: string | null | undefined;
+      try {
+        categoryId = await resolveCategoryId(prisma, req.body.categoryId);
+      } catch {
+        return res.status(400).json({ message: 'Category not found.' });
+      }
       await prisma.product.create({
         data: {
           id,
@@ -198,6 +223,7 @@ export default async function handler(req: any, res: any) {
           flavor: req.body.flavor || 'Signature',
           color: req.body.color || 'hsl(210, 20%, 35%)',
           bgGradient: req.body.bgGradient || 'from-slate-50 to-slate-200',
+          ...(categoryId !== undefined ? { categoryId } : {}),
         },
       });
       await saveRelations(prisma, id, req.body);

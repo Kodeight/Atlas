@@ -10,7 +10,7 @@ interface ShopPageProps {
 }
 
 export const ShopPage: React.FC<ShopPageProps> = ({ initialCategory = 'all' }) => {
-  const { currentPath, navigate, language, t, products } = useShop();
+  const { currentPath, navigate, language, t, products, categories: dbCategories } = useShop();
 
   // Determine active category from path or prop
   const currentCategory: ProductCategory = useMemo(() => {
@@ -32,7 +32,9 @@ export const ShopPage: React.FC<ShopPageProps> = ({ initialCategory = 'all' }) =
     setSelectedCategory(currentCategory);
   }, [currentCategory]);
 
-  const categories: { key: ProductCategory; labelEn: string; labelFr: string }[] = [
+  // Static pill definitions double as the offline fallback. When the
+  // database categories load, enabled ones (same slugs) take over.
+  const staticCategories: { key: ProductCategory; labelEn: string; labelFr: string }[] = [
     { key: 'all', labelEn: 'ALL', labelFr: 'TOUT' },
     { key: 'women', labelEn: 'WOMEN', labelFr: 'FEMMES' },
     { key: 'men', labelEn: 'MEN', labelFr: 'HOMMES' },
@@ -44,6 +46,17 @@ export const ShopPage: React.FC<ShopPageProps> = ({ initialCategory = 'all' }) =
     { key: 'new-arrivals', labelEn: 'NEW ARRIVALS', labelFr: 'NOUVEAUTÉS' },
     { key: 'sale', labelEn: 'SALE', labelFr: 'SOLDES' },
   ];
+
+  const categories: { key: ProductCategory; labelEn: string; labelFr: string }[] = useMemo(() => {
+    const enabled = dbCategories.filter((c) => c.enabled);
+    if (enabled.length === 0) return staticCategories;
+    const pills = enabled.map((c) => ({
+      key: c.slug as ProductCategory,
+      labelEn: c.name.toUpperCase(),
+      labelFr: (c.nameFr || c.name).toUpperCase(),
+    }));
+    return [{ key: 'all' as ProductCategory, labelEn: 'ALL', labelFr: 'TOUT' }, ...pills];
+  }, [dbCategories]);
 
   const filteredProducts = useMemo(() => {
     // Single source of truth: the CMS/database-backed catalog from context.

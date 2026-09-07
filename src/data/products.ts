@@ -636,9 +636,24 @@ function mapAdminProductToStorefront(adminProd: any, lang: StoreLanguage = 'en')
       colorNameById.set(c.id, shown || hex);
     }
   }
+  const KNOWN_CATEGORIES: Product['category'][] = [
+    'women', 'men', 'dresses', 'tops', 'bottoms', 'sets', 'accessories', 'new-arrivals', 'sale',
+  ];
   let category: Product['category'] = 'women';
+  // Database category wins when assigned; the heuristic below only covers
+  // products without one (backward compatible).
+  const dbCategory = adminProd.category && typeof adminProd.category === 'object' ? adminProd.category : null;
+  const dbSlug = typeof dbCategory?.slug === 'string' ? dbCategory.slug : null;
+  const dbLabel =
+    dbCategory && (typeof dbCategory.name === 'string' || typeof dbCategory.nameFr === 'string')
+      ? pickLang(dbCategory.name, dbCategory.nameFr, lang)
+      : null;
   const nameLower = name.toLowerCase();
-  if (/blazer|jacket|coat|outerwear/i.test(nameLower)) category = 'tops';
+  // Heuristic applies ONLY when no database category is assigned; otherwise
+  // the admin's assignment is authoritative and must never be overwritten.
+  if (dbSlug && (KNOWN_CATEGORIES as string[]).includes(dbSlug)) {
+    category = dbSlug as Product['category'];
+  } else if (/blazer|jacket|coat|outerwear/i.test(nameLower)) category = 'tops';
   else if (/shirt|top|tshirt|tee|blouse/i.test(nameLower)) category = 'tops';
   else if (/trouser|pants|bottom|skirt|shorts/i.test(nameLower)) category = 'bottoms';
   else if (/dress|gown|evening/i.test(nameLower)) category = 'dresses';
@@ -700,7 +715,7 @@ function mapAdminProductToStorefront(adminProd: any, lang: StoreLanguage = 'en')
     galleryEnabled,
     gallery,
     category,
-    categoryLabel: category,
+    categoryLabel: typeof dbLabel === 'string' && dbLabel ? dbLabel : category,
     price,
     salePrice: undefined,
     images: allImages && allImages.length > 0 ? allImages : [primaryImage],

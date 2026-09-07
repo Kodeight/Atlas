@@ -24,7 +24,7 @@ import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
 
 const MainRouter: React.FC = () => {
-  const { currentPath, language, products, refreshProducts } = useShop();
+  const { currentPath, language, products, refreshProducts, categories } = useShop();
 
   // Scroll to top + keep the browser tab title (and product meta) in sync.
   // Re-runs when products load so async product data updates the title.
@@ -41,7 +41,12 @@ const MainRouter: React.FC = () => {
     if (isProductSurface && isCatalogStale(60_000)) {
       refreshProducts();
     }
-    const title = getPageTitle(currentPath, language, (slug) => getProductBySlug(slug));
+    const title = getPageTitle(
+      currentPath,
+      language,
+      (slug) => getProductBySlug(slug),
+      (slug) => categories.find((c) => c.slug === slug),
+    );
     let description: string | undefined;
     if (title !== null && currentPath.startsWith('/product/')) {
       const slug = currentPath.replace('/product/', '').split('?')[0];

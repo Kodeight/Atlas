@@ -15,6 +15,22 @@ model AdminUser {
   passwordHash String
 }
 
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  nameFr      String?
+  slug        String    @unique
+  description String?
+  sortOrder   Int       @default(0)
+  enabled     Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+
+  @@index([slug])
+  @@index([enabled, sortOrder])
+}
+
 model Product {
   id             String         @id
   name           String
@@ -33,6 +49,10 @@ model Product {
   colors         ProductColor[]
   sizes          ProductSize[]
   images         ProductImage[]
+  categoryId     String?
+  category       Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([categoryId])
 }
 
 model ProductColor {

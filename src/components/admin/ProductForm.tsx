@@ -3,6 +3,14 @@ import { Upload, X } from 'lucide-react';
 import { adminText, AdminLang } from './adminText';
 import { compressImageFile, isSupportedImage } from './imageUpload';
 import { isValidHex, recognizeHex } from './colorNames';
+import { suggestCategory } from './categorySuggest';
+
+export interface CategoryOption {
+  id: string;
+  slug: string;
+  name: string;
+  nameFr?: string | null;
+}
 
 const FALLBACK_HEX = '#1F5742';
 
@@ -28,12 +36,15 @@ export interface AdminProduct {
   color?: string;
   bgGradient?: string;
   galleryEnabled?: boolean;
+  categoryId?: string | null;
+  category?: { id: string; slug: string } | null;
   colors?: { id: string; name?: string | null; nameFr?: string | null; hex: string; label?: string | null }[];
   sizes?: { id: string; label: string; enabled: boolean; stock?: number | null }[];
   images?: { id: string; url: string; alt?: string | null; colorId?: string | null }[];
 }
 
 export interface ProductFormValue {
+  categoryId: string | null;
   name: string;
   nameFr?: string;
   flavor: string;
@@ -52,6 +63,7 @@ export interface ProductFormValue {
 interface ProductFormProps {
   product?: AdminProduct | null;
   lang: AdminLang;
+  categories: CategoryOption[];
   onSubmit: (value: ProductFormValue) => Promise<void>;
   onCancel: () => void;
   saving: boolean;
@@ -68,6 +80,7 @@ interface FormState {
   image: string;
   stock: number;
   galleryEnabled: boolean;
+  categoryId: string | null;
 }
 
 const emptyForm: FormState = {
@@ -81,6 +94,7 @@ const emptyForm: FormState = {
   image: '',
   stock: 0,
   galleryEnabled: false,
+  categoryId: null,
 };
 
 const inputClass =
@@ -112,7 +126,7 @@ function Section({ title, children, defaultOpen = false }: { title: string; chil
   );
 }
 
-export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, onSubmit, onCancel, saving }) => {
+export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, categories, onSubmit, onCancel, saving }) => {
   const t = adminText[lang];
   const [form, setForm] = useState<FormState>(emptyForm);
   const [colors, setColors] = useState<ColorRow[]>([]);
@@ -136,6 +150,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, onSubmi
         image: product.image,
         stock: product.stock,
         galleryEnabled: product.galleryEnabled === true,
+        categoryId: product.categoryId || null,
       });
       setColors(
         (product.colors || []).map((c) => ({
@@ -173,9 +188,20 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, onSubmi
     setError(null);
   }, [product]);
 
-  const set = (field: keyof FormState, value: string | number | boolean) => {
+  const set = (field: keyof FormState, value: string | number | boolean | null) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
+
+  // Live, conservative suggestion from the typed title/description.
+  // Never auto-saves: the admin applies it explicitly, or ignores it.
+  const suggestedSlug = React.useMemo(
+    () => suggestCategory(form.name, form.description, categories),
+    [form.name, form.description, categories],
+  );
+  const currentSlug = categories.find((c) => c.id === form.categoryId)?.slug;
+  const suggestedCategory = suggestedSlug && suggestedSlug !== currentSlug
+    ? categories.find((c) => c.slug === suggestedSlug)
+    : undefined;
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
@@ -235,6 +261,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, onSubmi
       }
     }
     await onSubmit({
+      categoryId: form.categoryId,
       name: form.name.trim(),
       nameFr: blankToUndefined(form.nameFr),
       flavor: form.flavor.trim(),
@@ -296,6 +323,35 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, onSubmi
             {t.fDescFr}
             <textarea value={form.descriptionFr} onChange={(e) => set('descriptionFr', e.target.value)} rows={4} className={`${inputClass} mt-2 resize-y`} placeholder="Écrivez la description ici" />
           </label>
+        </div>
+        <div className="mt-4 rounded-lg border border-[#E7E3DA] bg-[#FCFBF7] p-4">
+          <label className="block text-sm font-medium text-[#151515]">
+            {t.fCategory}
+            <select
+              value={form.categoryId || ''}
+              onChange={(e) => set('categoryId', e.target.value || null)}
+              className={`${inputClass} mt-2 bg-white`}
+            >
+              <option value="">{t.fNoCategory}</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {lang === 'fr' ? c.nameFr || c.name : c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {suggestedCategory && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-[#6D6D6D] font-sans-ui">{t.fSuggested}:</span>
+              <button
+                type="button"
+                onClick={() => set('categoryId', suggestedCategory.id)}
+                className="px-3 py-1.5 rounded-full bg-[#1F5742]/10 text-[#1F5742] font-medium hover:bg-[#1F5742]/20 transition-colors"
+              >
+                {t.fApply} — {lang === 'fr' ? suggestedCategory.nameFr || suggestedCategory.name : suggestedCategory.name}
+              </button>
+            </div>
+          )}
         </div>
         <div className="grid gap-4 sm:grid-cols-3 mt-4">
           <label className="block text-sm font-medium text-[#151515]">

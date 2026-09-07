@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useShop } from '../context/ShopContext';
 import { AtlasLogo } from '../components/BrandElements';
-import { LogOut, Menu, Download, Package, Pencil, Plus, ShoppingCart, Trash2, Users, LayoutDashboard, Settings, X } from 'lucide-react';
-import { ProductForm, AdminProduct, ProductFormValue } from '../components/admin/ProductForm';
+import { LogOut, Menu, Download, Package, Pencil, Plus, ShoppingCart, Tag, Trash2, Users, LayoutDashboard, Settings, X } from 'lucide-react';
+import { ProductForm, AdminProduct, ProductFormValue, CategoryOption } from '../components/admin/ProductForm';
 import { adminText } from '../components/admin/adminText';
 import { downloadOrdersCsv } from '../components/admin/ordersCsv';
 import { SettingsForm } from '../components/admin/SettingsForm';
+import { useCountUp } from '../components/admin/useCountUp';
 import { SITE_TITLE } from '../pageMeta';
 
 interface AdminUser {
@@ -36,7 +37,24 @@ interface ShippingCompany {
   createdAt: string;
 }
 
-type ActiveTab = 'dashboard' | 'products' | 'orders' | 'admins' | 'settings';
+interface AdminCategory {
+  id: string;
+  name: string;
+  nameFr?: string | null;
+  slug: string;
+  description?: string | null;
+  sortOrder: number;
+  enabled: boolean;
+  _count?: { products: number };
+}
+
+interface DashboardStats {
+  products: number;
+  orders: number;
+  revenue: number;
+}
+
+type ActiveTab = 'dashboard' | 'products' | 'orders' | 'admins' | 'categories' | 'settings';
 
 async function adminApi(path: string, options: RequestInit = {}) {
   const res = await fetch(`/admin/api${path}`, {
@@ -66,6 +84,12 @@ const AdminPage: React.FC = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [companies, setCompanies] = useState<ShippingCompany[]>([]);
   const [companyName, setCompanyName] = useState('');
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [adminCategories, setAdminCategories] = useState<AdminCategory[]>([]);
+  const [catForm, setCatForm] = useState({ id: '', name: '', nameFr: '', slug: '', description: '', enabled: true });
+  const animatedProducts = useCountUp(products.length);
+  const animatedOrders = useCountUp(orders.length);
+  const animatedRevenue = useCountUp(stats?.revenue ?? 0);
   const [settings, setSettings] = useState<Record<string, any> | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
@@ -105,18 +129,84 @@ const AdminPage: React.FC = () => {
   }, [notice]);
 
   const reload = async () => {
-    const [freshProducts, freshOrders, freshUsers, freshCompanies, freshSettings] = await Promise.all([
+    const [freshProducts, freshOrders, freshUsers, freshCompanies, freshSettings, freshStats, freshCategories] = await Promise.all([
       adminApi('/products').catch(() => []),
       adminApi('/orders').catch(() => []),
       adminApi('/users').catch(() => []),
       adminApi('/companies').catch(() => []),
       adminApi('/settings').catch(() => null),
+      adminApi('/stats').catch(() => null),
+      adminApi('/categories').catch(() => []),
     ]);
     setProducts(Array.isArray(freshProducts) ? freshProducts : []);
     setOrders(Array.isArray(freshOrders) ? freshOrders : []);
     setUsers(Array.isArray(freshUsers) ? freshUsers : []);
     setCompanies(Array.isArray(freshCompanies) ? freshCompanies : []);
     if (freshSettings && typeof freshSettings === 'object') setSettings(freshSettings);
+    if (freshStats && typeof freshStats === 'object') setStats(freshStats as DashboardStats);
+    setAdminCategories(Array.isArray(freshCategories) ? freshCategories : []);
+  };
+
+  const resetCatForm = () => setCatForm({ id: '', name: '', nameFr: '', slug: '', description: '', enabled: true });
+
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        name: catForm.name.trim(),
+        nameFr: catForm.nameFr.trim() || undefined,
+        slug: catForm.slug.trim().toLowerCase(),
+        description: catForm.description.trim() || undefined,
+        enabled: catForm.enabled,
+      };
+      if (catForm.id) {
+        await adminApi(`/categories/${catForm.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      } else {
+        await adminApi('/categories', { method: 'POST', body: JSON.stringify(payload) });
+      }
+      resetCatForm();
+      await reload();
+    } catch (err) {
+      showNotice('error', err instanceof Error ? err.message : t.nErrCompany);
+    }
+  };
+
+  const handleEditCategory = (c: AdminCategory) => {
+    setCatForm({ id: c.id, name: c.name, nameFr: c.nameFr || '', slug: c.slug, description: c.description || '', enabled: c.enabled });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleToggleCategory = async (c: AdminCategory) => {
+    try {
+      await adminApi(`/categories/${c.id}`, { method: 'PATCH', body: JSON.stringify({ enabled: !c.enabled }) });
+      await reload();
+    } catch (err) {
+      showNotice('error', err instanceof Error ? err.message : t.nErrCompany);
+    }
+  };
+
+  const handleMoveCategory = async (c: AdminCategory, dir: -1 | 1) => {
+    const ordered = [...adminCategories].sort((a, b) => a.sortOrder - b.sortOrder);
+    const idx = ordered.findIndex((x) => x.id === c.id);
+    const other = ordered[idx + dir];
+    if (!other) return;
+    try {
+      await adminApi(`/categories/${c.id}`, { method: 'PATCH', body: JSON.stringify({ sortOrder: other.sortOrder }) });
+      await adminApi(`/categories/${other.id}`, { method: 'PATCH', body: JSON.stringify({ sortOrder: c.sortOrder }) });
+      await reload();
+    } catch (err) {
+      showNotice('error', err instanceof Error ? err.message : t.nErrCompany);
+    }
+  };
+
+  const handleDeleteCategory = async (c: AdminCategory) => {
+    try {
+      await adminApi(`/categories/${c.id}`, { method: 'DELETE' });
+      if (catForm.id === c.id) resetCatForm();
+      await reload();
+    } catch (err) {
+      showNotice('error', err instanceof Error ? err.message : t.nErrCompanyDelete);
+    }
   };
 
   const handleSaveSettings = async (value: Record<string, any>) => {
@@ -256,9 +346,11 @@ const AdminPage: React.FC = () => {
           ? t.navProducts
           : activeTab === 'orders'
             ? t.navOrders
-            : activeTab === 'admins'
-              ? 'Admins'
-              : t.navSettings;
+            : activeTab === 'categories'
+              ? t.navCategories
+              : activeTab === 'admins'
+                ? 'Admins'
+                : t.navSettings;
     document.title = `${tab} — Atlas`;
     return () => {
       document.title = SITE_TITLE;
@@ -279,9 +371,17 @@ const AdminPage: React.FC = () => {
     { id: 'dashboard', label: t.navDashboard, icon: LayoutDashboard },
     { id: 'products', label: t.navProducts, icon: Package },
     { id: 'orders', label: t.navOrders, icon: ShoppingCart },
+    { id: 'categories', label: t.navCategories, icon: Tag },
     { id: 'admins', label: t.navAdmins, icon: Users },
     { id: 'settings', label: t.navSettings, icon: Settings },
   ] as const;
+
+  const categoryOptions: CategoryOption[] = adminCategories.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    nameFr: c.nameFr,
+  }));
 
   return (
     <div className="min-h-screen flex bg-[#F7F3EA] font-sans-ui">
@@ -401,24 +501,28 @@ const AdminPage: React.FC = () => {
             </div>
           )}
           {activeTab === 'dashboard' && (
-            <div className="grid gap-4">
+            <div className="grid gap-4 dashboard-enter">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
                   <div className="text-xs font-medium text-[#6D6D6D] font-sans-ui">{t.cardProducts}</div>
-                  <div className="text-2xl font-semibold text-[#151515] mt-1 font-sans-ui">{products.length}</div>
+                  <div className="text-2xl font-semibold text-[#151515] mt-1 font-sans-ui tabular-nums">
+                    {Math.round(animatedProducts).toLocaleString()}
+                  </div>
                   <div className="text-xs text-[#6D6D6D] mt-1 font-sans-ui">{t.cardManaged}</div>
                 </div>
                 <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
                   <div className="text-xs font-medium text-[#6D6D6D] font-sans-ui">{t.cardOrders}</div>
-                  <div className="text-2xl font-semibold text-[#151515] mt-1 font-sans-ui">{orders.length}</div>
+                  <div className="text-2xl font-semibold text-[#151515] mt-1 font-sans-ui tabular-nums">
+                    {Math.round(animatedOrders).toLocaleString()}
+                  </div>
                   <div className="text-xs text-[#6D6D6D] mt-1 font-sans-ui">{t.cardCod}</div>
                 </div>
                 <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
-                  <div className="text-xs font-medium text-[#6D6D6D] font-sans-ui">{t.cardRevenue}</div>
-                  <div className="text-2xl font-semibold text-[#1F5742] mt-1">
-                    {orders.reduce((s: number, o: any) => s + (o.total || 0), 0).toLocaleString()} DA
+                  <div className="text-xs font-medium text-[#6D6D6D] font-sans-ui">{t.revReceived}</div>
+                  <div className="text-2xl font-semibold text-[#1F5742] mt-1 font-sans-ui tabular-nums">
+                    {Math.round(animatedRevenue).toLocaleString()} DA
                   </div>
-                  <div className="text-xs text-[#6D6D6D] mt-1">{t.cardSales}</div>
+                  <div className="text-xs text-[#6D6D6D] mt-1 font-sans-ui">{t.revNote}</div>
                 </div>
               </div>
               <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
@@ -476,6 +580,7 @@ const AdminPage: React.FC = () => {
                   <ProductForm
                     product={editingProduct}
                     lang={language === 'fr' ? 'fr' : 'en'}
+                    categories={categoryOptions}
                     saving={saving}
                     onCancel={() => {
                       setFormOpen(false);
@@ -666,6 +771,155 @@ const AdminPage: React.FC = () => {
                       )}
                     </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+          {activeTab === 'categories' && (
+            <div className="grid gap-4">
+              <div className="bg-white rounded-lg border border-[#E7E3DA] p-5">
+                <h3 className="text-sm font-semibold text-[#151515] font-sans-ui">
+                  {catForm.id ? t.catEdit : t.catAdd}
+                </h3>
+                <form onSubmit={handleSaveCategory} className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <input
+                    value={catForm.name}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      setCatForm((c) => ({
+                        ...c,
+                        name,
+                        slug: c.slug || name.toLowerCase().replace(/[^\w\s-]/g, '').trim().replace(/[\s]+/g, '-').replace(/-+/g, '-'),
+                      }));
+                    }}
+                    required
+                    minLength={2}
+                    placeholder={t.catName}
+                    className="px-4 py-3 border border-[#E7E3DA] rounded-lg bg-[#FCFBF7] text-sm font-sans-ui outline-none focus:border-[#1F5742]"
+                  />
+                  <input
+                    value={catForm.nameFr}
+                    onChange={(e) => setCatForm({ ...catForm, nameFr: e.target.value })}
+                    placeholder={t.catNameFr}
+                    className="px-4 py-3 border border-[#E7E3DA] rounded-lg bg-[#FCFBF7] text-sm font-sans-ui outline-none focus:border-[#1F5742]"
+                  />
+                  <input
+                    value={catForm.slug}
+                    onChange={(e) => setCatForm({ ...catForm, slug: e.target.value.toLowerCase() })}
+                    required
+                    placeholder={t.catSlug}
+                    className="px-4 py-3 border border-[#E7E3DA] rounded-lg bg-[#FCFBF7] text-sm font-mono outline-none focus:border-[#1F5742]"
+                  />
+                  <input
+                    value={catForm.description}
+                    onChange={(e) => setCatForm({ ...catForm, description: e.target.value })}
+                    placeholder={t.catDesc}
+                    className="px-4 py-3 border border-[#E7E3DA] rounded-lg bg-[#FCFBF7] text-sm font-sans-ui outline-none focus:border-[#1F5742]"
+                  />
+                  <label className="flex items-center gap-3 text-sm font-medium text-[#151515] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={catForm.enabled}
+                      onChange={(e) => setCatForm({ ...catForm, enabled: e.target.checked })}
+                      className="w-5 h-5 rounded accent-[#1F5742] cursor-pointer"
+                    />
+                    {t.catEnabled}
+                  </label>
+                  <div className="flex gap-3">
+                    <button
+                      type="submit"
+                      className="flex-1 py-3 rounded-lg bg-[#1F5742] text-white text-sm font-medium font-sans-ui hover:bg-[#164030] transition-colors"
+                    >
+                      {t.catSave}
+                    </button>
+                    {catForm.id && (
+                      <button
+                        type="button"
+                        onClick={resetCatForm}
+                        className="px-5 py-3 rounded-lg border border-[#E7E3DA] text-sm font-medium hover:bg-[#F7F3EA] transition-colors"
+                      >
+                        {t.fCancel}
+                      </button>
+                    )}
+                  </div>
+                </form>
+                <p className="text-xs text-[#6D6D6D] mt-3 font-sans-ui">{t.catSub}</p>
+              </div>
+              <div className="bg-white rounded-lg border border-[#E7E3DA] overflow-hidden">
+                <div className="px-5 py-4 border-b border-[#E7E3DA]">
+                  <h3 className="text-sm font-semibold font-sans-ui">{t.catTitle} ({adminCategories.length})</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-[#6D6D6D] border-b border-[#E7E3DA] bg-[#FCFBF7]">
+                        <th className="text-left px-4 py-2 font-medium">{t.catName}</th>
+                        <th className="text-left px-4 py-2 font-medium">{t.catSlug}</th>
+                        <th className="text-left px-4 py-2 font-medium">{t.catProducts}</th>
+                        <th className="text-left px-4 py-2 font-medium">{t.catStatus}</th>
+                        <th className="text-right px-4 py-2 font-medium">{t.catActions}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminCategories.map((c, idx) => (
+                        <tr key={c.id} className="border-b border-[#E7E3DA]/60 hover:bg-[#F7F3EA]">
+                          <td className="px-4 py-2 font-medium text-[#151515]">
+                            {c.name}
+                            {c.nameFr && <span className="block text-xs font-normal text-[#6D6D6D]">{c.nameFr}</span>}
+                          </td>
+                          <td className="px-4 py-2 font-mono text-xs text-[#6D6D6D]">/category/{c.slug}</td>
+                          <td className="px-4 py-2">{c._count?.products ?? '—'}</td>
+                          <td className="px-4 py-2">
+                            <button
+                              onClick={() => handleToggleCategory(c)}
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                                c.enabled ? 'bg-[#1F5742]/10 text-[#1F5742]' : 'bg-[#E7E3DA]/60 text-[#6D6D6D]'
+                              }`}
+                            >
+                              {c.enabled ? t.catEnabled : t.catDisabled}
+                            </button>
+                          </td>
+                          <td className="px-4 py-2">
+                            <div className="flex justify-end gap-1.5">
+                              <button
+                                onClick={() => handleMoveCategory(c, -1)}
+                                disabled={idx === 0}
+                                aria-label={t.moveUp}
+                                className="px-2 py-1.5 rounded-lg border border-[#E7E3DA] text-xs text-[#6D6D6D] hover:bg-[#F7F3EA] disabled:opacity-30"
+                              >
+                                ↑
+                              </button>
+                              <button
+                                onClick={() => handleMoveCategory(c, 1)}
+                                disabled={idx === adminCategories.length - 1}
+                                aria-label={t.moveDown}
+                                className="px-2 py-1.5 rounded-lg border border-[#E7E3DA] text-xs text-[#6D6D6D] hover:bg-[#F7F3EA] disabled:opacity-30"
+                              >
+                                ↓
+                              </button>
+                              <button
+                                onClick={() => handleEditCategory(c)}
+                                className="px-3 py-1.5 rounded-lg border border-[#E7E3DA] text-xs font-medium hover:bg-[#F7F3EA] transition-colors"
+                              >
+                                {t.edit}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCategory(c)}
+                                className="px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-xs font-medium text-red-700 hover:bg-red-100 transition-colors"
+                              >
+                                {t.catDelete}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {adminCategories.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-sm text-[#6D6D6D]">{t.catEmpty}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}

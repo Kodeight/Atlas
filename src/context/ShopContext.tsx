@@ -58,6 +58,16 @@ interface ShopContextType {
   isProductsLoading: boolean;
   error: string | null;
   codEnabled: boolean;
+  categories: StoreCategory[];
+}
+
+export interface StoreCategory {
+  id: string;
+  name: string;
+  nameFr?: string | null;
+  slug: string;
+  enabled: boolean;
+  sortOrder: number;
 }
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
@@ -111,6 +121,17 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [products, setProducts] = useState<Product[]>([]);
   const [isProductsLoading, setIsProductsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Storefront categories (database-backed, static fallback when unreachable)
+  const [categories, setCategories] = useState<StoreCategory[]>([]);
+  useEffect(() => {
+    fetch('/admin/api/categories', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => {
+        if (Array.isArray(data)) setCategories(data);
+      })
+      .catch(() => {});
+  }, []);
 
   // Store settings (COD toggle enforced at checkout; fail-open preserves current behavior)
   const [codEnabled, setCodEnabled] = useState(true);
@@ -317,6 +338,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isProductsLoading,
         error,
         codEnabled,
+        categories,
       }}
     >
       {children}

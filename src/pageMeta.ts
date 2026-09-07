@@ -8,6 +8,11 @@ export interface TitleProduct {
   shortDescription?: string;
 }
 
+export interface TitleCategory {
+  name: string;
+  nameFr?: string | null;
+}
+
 /**
  * Pure page-title resolver (testable without a browser).
  * Returns null for /admin* — the AdminPage owns that title (tab-aware).
@@ -17,12 +22,18 @@ export function getPageTitle(
   path: string,
   lang: Language,
   findProduct?: (slug: string) => TitleProduct | undefined,
+  findCategory?: (slug: string) => TitleCategory | undefined,
 ): string | null {
   const t = (fr: string, en: string) => (lang === 'fr' ? fr : en);
   if (path === '/' || path === '') return SITE_TITLE;
   if (path === '/shop') return `${t('Boutique', 'Shop')} ${SUFFIX}`;
   if (path.startsWith('/category/')) {
     const key = path.replace('/category/', '').split('/')[0];
+    const db = key ? findCategory?.(key) : undefined;
+    if (db && db.name) {
+      const label = lang === 'fr' ? db.nameFr || db.name : db.name;
+      return `${label} ${SUFFIX}`;
+    }
     const known: Record<string, [string, string]> = {
       women: ['Femmes', 'Women'],
       men: ['Hommes', 'Men'],

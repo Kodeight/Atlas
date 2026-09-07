@@ -17,6 +17,7 @@ try {
     products: new Map<string, any>(),
     orders: new Map<string, any>(),
     orderItems: new Map<string, any>(),
+    categories: new Map<string, any>(),
     companies: new Map<string, any>([
       ["fb-comp-1", { id: "fb-comp-1", name: "Yalidine", active: true, createdAt: new Date() }],
       ["fb-comp-2", { id: "fb-comp-2", name: "ZR Express", active: true, createdAt: new Date() }],
@@ -93,7 +94,43 @@ try {
         return this._row;
       },
     },
+    category: {
+      count: async () => store.categories.size,
+      findMany: async (args?: any) => {
+        const arr = Array.from(store.categories.values());
+        return arr.sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      },
+      findUnique: async ({ where, include }: any) => {
+        let found: any = null;
+        if (where.id) found = store.categories.get(where.id) || null;
+        if (where.slug) found = Array.from(store.categories.values()).find((c: any) => c.slug === where.slug) || null;
+        if (found && include?._count) {
+          found = { ...found, _count: { products: Array.from(store.products.values()).filter((p: any) => p.categoryId === found.id).length } };
+        }
+        return found;
+      },
+      create: async ({ data }: any) => {
+        const c = { ...data, id: data.id || `cat-${Date.now()}`, createdAt: new Date(), updatedAt: new Date() };
+        store.categories.set(c.id, c);
+        return c;
+      },
+      update: async ({ where, data }: any) => { const c = store.categories.get(where.id); if (c) Object.assign(c, data, { updatedAt: new Date() }); return c; },
+      delete: async ({ where }: any) => { store.categories.delete(where.id); },
+      aggregate: async () => ({ _max: { sortOrder: Math.max(-1, ...Array.from(store.categories.values()).map((c: any) => c.sortOrder || 0)) } }),
+      upsert: async ({ where, create, update }: any) => {
+        const existing = Array.from(store.categories.values()).find((c: any) => c.slug === where.slug);
+        if (existing) { Object.assign(existing, update, { updatedAt: new Date() }); return existing; }
+        const c = { ...create, id: `cat-${Date.now()}`, createdAt: new Date(), updatedAt: new Date() };
+        store.categories.set(c.id, c);
+        return c;
+      },
+    },
     order: {
+      count: async () => store.orders.size,
+      aggregate: async ({ where }: any) => {
+        const list = Array.from(store.orders.values()).filter((o: any) => !where?.status || o.status === where.status);
+        return { _sum: { total: list.reduce((s: number, o: any) => s + (o.total || 0), 0) } };
+      },
       create: async ({ data, include }: any) => {
         const id = `order-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
         const order: any = { id, customerName: data.customerName, phone: data.phone, address: data.address, total: data.total, status: data.status, shippingCompany: data.shippingCompany ?? null, deliveryType: data.deliveryType ?? 'home', date: data.date, items: [] };
@@ -215,9 +252,19 @@ const imageInputSchema = z.object({
   colorKey: z.string().max(80).optional(),
 });
 
+async function resolveCategoryId(categoryId: unknown): Promise<string | null | undefined> {
+  // undefined = untouched (field absent); null = explicitly unassigned.
+  if (categoryId === undefined) return undefined;
+  if (categoryId === null || categoryId === "") return null;
+  if (typeof categoryId !== "string") throw new Error("Invalid category.");
+  const category = await prisma.category.findUnique({ where: { id: categoryId } });
+  if (!category) throw new Error("Category not found.");
+  return category.id;
+}
+
 function normalizeProductData(data: z.infer<typeof productSchema>) {
   const theme = defaultProductTheme(data.name);
-  const { colors, sizes, images, ...scalars } = data as Record<string, unknown>;
+  const { colors, sizes, images, categoryId, ...scalars } = data as Record<string, unknown>;
   return {
     ...scalars,
     flavor: (scalars.flavor as string) || deriveFlavor(data.name),
@@ -292,11 +339,34 @@ async function saveProductRelations(productId: string, payload: VariantPayload) 
   });
 }
 
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 const productRelationsInclude = {
   colors: { orderBy: { position: "asc" as const } },
   sizes: { orderBy: { position: "asc" as const } },
   images: { orderBy: { position: "asc" as const } },
+  category: { select: { id: true, name: true, nameFr: true, slug: true } },
 };
+
+const categorySchema = z.object({
+  name: z.string().min(2).max(80),
+  nameFr: z.string().min(1).max(80).optional(),
+  slug: z.string().regex(SLUG_RE, "Slug must be lowercase letters, numbers and dashes."),
+  description: z.string().max(500).optional(),
+  sortOrder: z.number().int().optional(),
+  enabled: z.boolean().optional(),
+});
+
+const categoryPatchSchema = z
+  .object({
+    name: z.string().min(2).max(80).optional(),
+    nameFr: z.string().min(1).max(80).optional(),
+    slug: z.string().regex(SLUG_RE, "Slug must be lowercase letters, numbers and dashes.").optional(),
+    description: z.string().max(500).nullable().optional(),
+    sortOrder: z.number().int().optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((d) => Object.keys(d).length > 0, { message: "Nothing to update." });
 
 function isValidImagePath(value: string) {
   if (value.startsWith("/") || value.startsWith("./") || value.startsWith("../")) return true;
@@ -343,6 +413,7 @@ const productSchema = z.object({
   colors: z.array(colorInputSchema).max(40).optional(),
   sizes: z.array(sizeInputSchema).max(30).optional(),
   images: z.array(imageInputSchema).max(30).optional(),
+  categoryId: z.string().nullable().optional(),
 });
 
 const orderSchema = z.object({
@@ -521,6 +592,29 @@ function unauthorized(res: Response) {
 
 const DEFAULT_SHIPPING_COMPANIES = ["Yalidine", "ZR Express", "Maestro"];
 
+// Mirror of the storefront category pills (ShopPage) — same slugs, same labels.
+const DEFAULT_CATEGORIES: { slug: string; name: string; nameFr: string; sortOrder: number }[] = [
+  { slug: "women", name: "Women", nameFr: "Femmes", sortOrder: 0 },
+  { slug: "men", name: "Men", nameFr: "Hommes", sortOrder: 1 },
+  { slug: "dresses", name: "Dresses", nameFr: "Robes", sortOrder: 2 },
+  { slug: "tops", name: "Tops", nameFr: "Hauts", sortOrder: 3 },
+  { slug: "bottoms", name: "Bottoms", nameFr: "Pantalons", sortOrder: 4 },
+  { slug: "sets", name: "Sets", nameFr: "Ensembles", sortOrder: 5 },
+  { slug: "accessories", name: "Accessories", nameFr: "Accessoires", sortOrder: 6 },
+  { slug: "new-arrivals", name: "New Arrivals", nameFr: "Nouveautés", sortOrder: 7 },
+  { slug: "sale", name: "Sale", nameFr: "Soldes", sortOrder: 8 },
+];
+
+async function ensureCategories() {
+  for (const c of DEFAULT_CATEGORIES) {
+    await prisma.category.upsert({
+      where: { slug: c.slug },
+      create: { ...c, enabled: true },
+      update: { name: c.name, nameFr: c.nameFr, sortOrder: c.sortOrder },
+    });
+  }
+}
+
 async function ensureShippingCompanies() {
   const count = await prisma.shippingCompany.count();
   if (count === 0) {
@@ -548,7 +642,7 @@ async function ensureAdminUser() {
 
 export function createAdminRouter() {
   const router = express.Router();
-  void Promise.all([ensureAdminUser(), seedInitialProducts(), ensureShippingCompanies()]).catch((error) => {
+  void Promise.all([ensureAdminUser(), seedInitialProducts(), ensureShippingCompanies(), ensureCategories()]).catch((error) => {
     console.error("Failed to initialize admin backend:", error);
   });
 
@@ -672,6 +766,14 @@ export function createAdminRouter() {
     return res.json(companies);
   });
 
+  router.get("/categories", async (_req: Request, res: Response) => {
+    const categories = await prisma.category.findMany({
+      orderBy: { sortOrder: "asc" },
+      include: { _count: { select: { products: true } } },
+    });
+    return res.json(categories);
+  });
+
   router.get("/settings", async (_req: Request, res: Response) => {
     const settings = await prisma.storeSettings.findUnique({ where: { id: "default" } });
     return res.json(settings ?? defaultSettings());
@@ -790,10 +892,17 @@ export function createAdminRouter() {
     }
 
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    let categoryId: string | null | undefined;
+    try {
+      categoryId = await resolveCategoryId((parsed.data as Record<string, unknown>).categoryId);
+    } catch {
+      return res.status(400).json({ message: "Category not found." });
+    }
     const newProduct = await prisma.product.create({
       data: {
         id,
         ...normalizeProductData(parsed.data),
+        ...(categoryId !== undefined ? { categoryId } : {}),
       },
     });
     await saveProductRelations(id, parsed.data);
@@ -818,9 +927,18 @@ export function createAdminRouter() {
       return res.status(404).json({ message: "Product not found." });
     }
 
+    let categoryId: string | null | undefined;
+    try {
+      categoryId = await resolveCategoryId((parsed.data as Record<string, unknown>).categoryId);
+    } catch {
+      return res.status(400).json({ message: "Category not found." });
+    }
     const updatedProduct = await prisma.product.update({
       where: { id: productId },
-      data: normalizeProductData(parsed.data),
+      data: {
+        ...normalizeProductData(parsed.data),
+        ...(categoryId !== undefined ? { categoryId } : {}),
+      },
     });
     await saveProductRelations(productId, parsed.data);
     const withRelations = await prisma.product.findUnique({
@@ -993,6 +1111,126 @@ export function createAdminRouter() {
       update: parsed.data,
     });
     return res.json(updated);
+  });
+
+  router.post("/categories", async (req: Request, res: Response) => {
+    const parsed = categorySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: parsed.error.errors[0].message });
+    }
+    const slugTaken = await prisma.category.findUnique({ where: { slug: parsed.data.slug } });
+    if (slugTaken) {
+      return res.status(400).json({ message: "This slug is already used." });
+    }
+    const maxOrder = await prisma.category.aggregate({ _max: { sortOrder: true } });
+    const created = await prisma.category.create({
+      data: {
+        name: parsed.data.name.trim(),
+        nameFr: parsed.data.nameFr?.trim() || null,
+        slug: parsed.data.slug,
+        description: parsed.data.description?.trim() || null,
+        sortOrder: parsed.data.sortOrder ?? ((maxOrder._max.sortOrder ?? -1) + 1),
+        enabled: parsed.data.enabled ?? true,
+      },
+    });
+    return res.status(201).json(created);
+  });
+
+  router.put("/categories/:id", async (req: Request, res: Response) => {
+    const parsed = categorySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: parsed.error.errors[0].message });
+    }
+    const categoryId = getRouteParamId(req.params.id);
+    if (!categoryId) {
+      return res.status(400).json({ message: "Category id is required." });
+    }
+    const existing = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!existing) {
+      return res.status(404).json({ message: "Category not found." });
+    }
+    const slugTaken = await prisma.category.findUnique({ where: { slug: parsed.data.slug } });
+    if (slugTaken && slugTaken.id !== categoryId) {
+      return res.status(400).json({ message: "This slug is already used." });
+    }
+    const updated = await prisma.category.update({
+      where: { id: categoryId },
+      data: {
+        name: parsed.data.name.trim(),
+        nameFr: parsed.data.nameFr?.trim() || null,
+        slug: parsed.data.slug,
+        description: parsed.data.description?.trim() || null,
+        sortOrder: parsed.data.sortOrder ?? existing.sortOrder,
+        enabled: parsed.data.enabled ?? existing.enabled,
+      },
+    });
+    return res.json(updated);
+  });
+
+  router.patch("/categories/:id", async (req: Request, res: Response) => {
+    const parsed = categoryPatchSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: parsed.error.errors[0].message });
+    }
+    const categoryId = getRouteParamId(req.params.id);
+    if (!categoryId) {
+      return res.status(400).json({ message: "Category id is required." });
+    }
+    const existing = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!existing) {
+      return res.status(404).json({ message: "Category not found." });
+    }
+    if (parsed.data.slug) {
+      const slugTaken = await prisma.category.findUnique({ where: { slug: parsed.data.slug } });
+      if (slugTaken && slugTaken.id !== categoryId) {
+        return res.status(400).json({ message: "This slug is already used." });
+      }
+    }
+    const updated = await prisma.category.update({
+      where: { id: categoryId },
+      data: {
+        ...(parsed.data.name !== undefined ? { name: parsed.data.name.trim() } : {}),
+        ...(parsed.data.nameFr !== undefined ? { nameFr: parsed.data.nameFr?.trim() || null } : {}),
+        ...(parsed.data.slug !== undefined ? { slug: parsed.data.slug } : {}),
+        ...(parsed.data.description !== undefined ? { description: parsed.data.description?.trim() || null } : {}),
+        ...(parsed.data.sortOrder !== undefined ? { sortOrder: parsed.data.sortOrder } : {}),
+        ...(parsed.data.enabled !== undefined ? { enabled: parsed.data.enabled } : {}),
+      },
+    });
+    return res.json(updated);
+  });
+
+  router.delete("/categories/:id", async (req: Request, res: Response) => {
+    const categoryId = getRouteParamId(req.params.id);
+    if (!categoryId) {
+      return res.status(400).json({ message: "Category id is required." });
+    }
+    const existing = await prisma.category.findUnique({
+      where: { id: categoryId },
+      include: { _count: { select: { products: true } } },
+    });
+    if (!existing) {
+      return res.status(404).json({ message: "Category not found." });
+    }
+    if (existing._count.products > 0) {
+      return res.status(400).json({
+        message: `Cannot delete: ${existing._count.products} product(s) use this category. Disable it instead.`,
+      });
+    }
+    await prisma.category.delete({ where: { id: categoryId } });
+    return res.json({ success: true });
+  });
+
+  router.get("/stats", async (_req: Request, res: Response) => {
+    const [products, orders, revenue] = await Promise.all([
+      prisma.product.count(),
+      prisma.order.count(),
+      prisma.order.aggregate({
+        _sum: { total: true },
+        where: { status: "delivered" },
+      }),
+    ]);
+    return res.json({ products, orders, revenue: revenue._sum.total ?? 0 });
   });
 
   return router;

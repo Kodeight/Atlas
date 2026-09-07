@@ -23,6 +23,7 @@ const REL_INCLUDE = {
   colors: { orderBy: { position: 'asc' as const } },
   sizes: { orderBy: { position: 'asc' as const } },
   images: { orderBy: { position: 'asc' as const } },
+  category: { select: { id: true, name: true, nameFr: true, slug: true } },
 };
 
 function mapDbProductToStorefront(dbProduct: any) {
@@ -35,6 +36,13 @@ function mapDbProductToStorefront(dbProduct: any) {
     .replace(/[\s]+/g, '-')
     .replace(/-+/g, '-')
     .trim();
+  const KNOWN_CATEGORIES = ['women', 'men', 'dresses', 'tops', 'bottoms', 'sets', 'accessories', 'new-arrivals', 'sale'];
+  const dbSlug = dbProduct.category && typeof dbProduct.category.slug === 'string' ? dbProduct.category.slug : null;
+  const dbCategory = dbSlug && KNOWN_CATEGORIES.includes(dbSlug) ? dbSlug : null;
+  const dbLabel =
+    dbProduct.category && typeof dbProduct.category.name === 'string' && dbProduct.category.name
+      ? dbProduct.category.name
+      : null;
   const relColors: any[] = Array.isArray(dbProduct.colors) ? dbProduct.colors : [];
   const relSizes: any[] = Array.isArray(dbProduct.sizes) ? dbProduct.sizes : [];
   const relImages: any[] = Array.isArray(dbProduct.images) ? dbProduct.images : [];
@@ -77,8 +85,8 @@ function mapDbProductToStorefront(dbProduct: any) {
     slug,
     description: dbProduct.description,
     shortDescription: dbProduct.description.split('|')[0].trim().split('.')[0] + '.',
-    category: 'women' as const,
-    categoryLabel: 'Women',
+    category: (dbCategory || 'women') as 'women',
+    categoryLabel: dbLabel || 'Women',
     price: dbProduct.price,
     salePrice: undefined,
     images: galleryEnabled && galleryUrls.length > 0 ? [dbProduct.image, ...galleryUrls].filter(Boolean) : [dbProduct.image],
