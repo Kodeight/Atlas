@@ -86,7 +86,7 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-[#F7F3EA] text-[#151515] px-4 py-10">
       <div className="bg-white w-full max-w-[400px] p-8 sm:p-10 rounded-2xl shadow-[0_24px_60px_-24px_rgba(31,87,66,0.25)] border border-[#E7E3DA]">
         <div className="flex flex-col items-center mb-8">
-          <span className="flex items-center justify-center w-20 h-20 rounded-2xl overflow-hidden bg-[#1F5742]/5 border border-[#E7E3DA] mb-4 p-2.5">
+          <span className="flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden bg-[#1F5742]/5 border border-[#E7E3DA] mb-4">
             <img
               src="https://atlasdz.ifree.page/wp-content/uploads/2026/07/ATLAS-logo-2.png"
               alt="Atlas"
