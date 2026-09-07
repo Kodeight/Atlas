@@ -48,6 +48,12 @@ function mapDbProductToStorefront(dbProduct: any) {
   const relImages: any[] = Array.isArray(dbProduct.images) ? dbProduct.images : [];
   const galleryEnabled = dbProduct.galleryEnabled === true && relImages.length > 0;
   const galleryUrls = relImages.map((g: any) => g.url).filter((u: any) => typeof u === 'string' && u.length > 0);
+  const compareAt =
+    typeof dbProduct.compareAtPrice === 'number' && dbProduct.compareAtPrice > dbProduct.price
+      ? dbProduct.compareAtPrice
+      : undefined;
+  const isSale = compareAt !== undefined;
+  const isNew = dbProduct.isNew === true;
   const colorNameById = new Map<string, string>();
   for (const c of relColors) {
     if (c && c.id) {
@@ -87,8 +93,8 @@ function mapDbProductToStorefront(dbProduct: any) {
     shortDescription: dbProduct.description.split('|')[0].trim().split('.')[0] + '.',
     category: (dbCategory || 'women') as 'women',
     categoryLabel: dbLabel || 'Women',
-    price: dbProduct.price,
-    salePrice: undefined,
+    price: isSale ? (compareAt as number) : dbProduct.price,
+    salePrice: isSale ? dbProduct.price : undefined,
     images: galleryEnabled && galleryUrls.length > 0 ? [dbProduct.image, ...galleryUrls].filter(Boolean) : [dbProduct.image],
     galleryEnabled,
     gallery: galleryEnabled
@@ -110,9 +116,9 @@ function mapDbProductToStorefront(dbProduct: any) {
     colors,
     stock: dbProduct.stock,
     sku: `ATL-${dbProduct.id}`,
-    isSale: false,
+    isSale,
     isFeatured: false,
-    isNew: false,
+    isNew,
     rating: 4.5,
     reviewsCount: 0,
   };

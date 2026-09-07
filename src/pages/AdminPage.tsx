@@ -617,7 +617,15 @@ const AdminPage: React.FC = () => {
                               />
                               <div className="min-w-0">
                                 <div className="font-medium text-[#151515] truncate">{p.name}</div>
-                                {p.flavor && <div className="text-xs text-[#6D6D6D] truncate">{p.flavor}</div>}
+                                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                  {p.flavor && <span className="text-xs text-[#6D6D6D] truncate">{p.flavor}</span>}
+                                  {typeof p.compareAtPrice === 'number' && p.compareAtPrice > p.price && (
+                                    <span className="px-1.5 py-px rounded text-[10px] font-semibold bg-[#1F5742] text-white">{t.badgeSale}</span>
+                                  )}
+                                  {p.isNew === true && (
+                                    <span className="px-1.5 py-px rounded text-[10px] font-semibold bg-[#E7E3DA] text-[#1F5742]">{t.badgeNew}</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </td>

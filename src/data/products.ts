@@ -706,6 +706,14 @@ function mapAdminProductToStorefront(adminProd: any, lang: StoreLanguage = 'en')
         }))
       : undefined;
   const primaryImage = image ? image : '/placeholder-product.webp';
+  // WooCommerce-style sale: compare-at is the crossed original, price stays the
+  // selling price. Only treated as a sale when compare-at is higher.
+  const compareAt =
+    typeof adminProd.compareAtPrice === 'number' && adminProd.compareAtPrice > price
+      ? adminProd.compareAtPrice
+      : undefined;
+  const isSale = compareAt !== undefined;
+  const isNew = adminProd.isNew === true;
   return {
     id,
     name: displayName,
@@ -716,17 +724,17 @@ function mapAdminProductToStorefront(adminProd: any, lang: StoreLanguage = 'en')
     gallery,
     category,
     categoryLabel: typeof dbLabel === 'string' && dbLabel ? dbLabel : category,
-    price,
-    salePrice: undefined,
+    price: isSale ? compareAt as number : price,
+    salePrice: isSale ? price : undefined,
     images: allImages && allImages.length > 0 ? allImages : [primaryImage],
     sizes: sizes.length > 0 ? sizes : ['S', 'M', 'L'],
     sizeOptions,
     colors,
     stock,
     sku: `ATL-${id.split('-')[1] || id}`,
-    isSale: false,
+    isSale,
     isFeatured: false,
-    isNew: false,
+    isNew,
     rating: 4.5,
     reviewsCount: 0,
     fabricDetails: undefined,

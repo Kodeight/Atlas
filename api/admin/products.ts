@@ -34,6 +34,11 @@ function badBody(body: any): string | null {
   if (typeof body.price !== 'number' || !(body.price > 0)) return 'Product price must be positive.';
   if (typeof body.image !== 'string' || body.image.length < 1) return 'Product image is required.';
   if (typeof body.stock !== 'number' || !Number.isInteger(body.stock) || body.stock < 0) return 'Product stock must be a non-negative integer.';
+  if (body.compareAtPrice !== undefined && body.compareAtPrice !== null) {
+    if (typeof body.compareAtPrice !== 'number' || !(body.compareAtPrice > 0)) return 'Invalid compare-at price.';
+    if (typeof body.price === 'number' && body.compareAtPrice <= body.price) return 'Compare-at price must be higher than the sale price.';
+  }
+  if (body.isNew !== undefined && typeof body.isNew !== 'boolean') return 'Invalid new-arrival flag.';
   for (const key of ['nameFr', 'descriptionFr', 'flavorFr'] as const) {
     if (body[key] !== undefined && typeof body[key] !== 'string') return `Invalid ${key}.`;
   }
@@ -147,6 +152,9 @@ function pickWritable(body: any) {
   if (typeof body.descriptionFr === 'string') out.descriptionFr = body.descriptionFr;
   if (typeof body.flavorFr === 'string') out.flavorFr = body.flavorFr;
   if (typeof body.galleryEnabled === 'boolean') out.galleryEnabled = body.galleryEnabled;
+  if (typeof body.compareAtPrice === 'number') out.compareAtPrice = body.compareAtPrice;
+  else if (body.compareAtPrice === null) out.compareAtPrice = null;
+  if (typeof body.isNew === 'boolean') out.isNew = body.isNew;
   return out;
 }
 

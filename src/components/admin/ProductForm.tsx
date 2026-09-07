@@ -31,6 +31,8 @@ export interface AdminProduct {
   description: string;
   descriptionFr?: string;
   price: number;
+  compareAtPrice?: number | null;
+  isNew?: boolean;
   image: string;
   stock: number;
   color?: string;
@@ -45,6 +47,8 @@ export interface AdminProduct {
 
 export interface ProductFormValue {
   categoryId: string | null;
+  compareAtPrice: number | null;
+  isNew: boolean;
   name: string;
   nameFr?: string;
   flavor: string;
@@ -81,6 +85,9 @@ interface FormState {
   stock: number;
   galleryEnabled: boolean;
   categoryId: string | null;
+  onSale: boolean;
+  compareAt: number;
+  isNew: boolean;
 }
 
 const emptyForm: FormState = {
@@ -95,6 +102,9 @@ const emptyForm: FormState = {
   stock: 0,
   galleryEnabled: false,
   categoryId: null,
+  onSale: false,
+  compareAt: 0,
+  isNew: false,
 };
 
 const inputClass =
@@ -151,6 +161,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, categor
         stock: product.stock,
         galleryEnabled: product.galleryEnabled === true,
         categoryId: product.categoryId || null,
+        onSale: typeof product.compareAtPrice === 'number' && product.compareAtPrice > product.price,
+        compareAt:
+          typeof product.compareAtPrice === 'number' && product.compareAtPrice > product.price
+            ? product.compareAtPrice
+            : product.price,
+        isNew: product.isNew === true,
       });
       setColors(
         (product.colors || []).map((c) => ({
@@ -232,6 +248,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, categor
       setError(t.ePrice);
       return;
     }
+    if (form.onSale && !(form.compareAt > form.price)) {
+      setError(t.eCompareAt);
+      return;
+    }
     if (!form.image.trim()) {
       setError(t.eImage);
       return;
@@ -262,6 +282,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, categor
     }
     await onSubmit({
       categoryId: form.categoryId,
+      compareAtPrice: form.onSale ? form.compareAt : null,
+      isNew: form.isNew,
       name: form.name.trim(),
       nameFr: blankToUndefined(form.nameFr),
       flavor: form.flavor.trim(),
@@ -365,6 +387,44 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, lang, categor
           <label className="block text-sm font-medium text-[#151515]">
             {t.fPrice}
             <input type="number" min={0} step={0.01} value={form.price || ''} onChange={(e) => set('price', e.target.value ? Number(e.target.value) : 0)} className={`${inputClass} mt-2`} placeholder="0" />
+          </label>
+        </div>
+        <div className="rounded-lg border border-[#E7E3DA] bg-[#FCFBF7] p-4 space-y-3">
+          <label className="flex items-center gap-3 text-sm font-medium text-[#151515] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.onSale}
+              onChange={(e) => {
+                const on = e.target.checked;
+                set('onSale', on);
+                if (on && !(form.compareAt > form.price)) set('compareAt', form.price);
+              }}
+              className="w-5 h-5 rounded accent-[#1F5742] cursor-pointer"
+            />
+            {t.fSale}
+          </label>
+          {form.onSale && (
+            <label className="block text-sm font-medium text-[#151515]">
+              {t.fCompareAt}
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                value={form.compareAt || ''}
+                onChange={(e) => set('compareAt', e.target.value ? Number(e.target.value) : 0)}
+                className={`${inputClass} mt-2`}
+                placeholder="0"
+              />
+            </label>
+          )}
+          <label className="flex items-center gap-3 text-sm font-medium text-[#151515] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.isNew}
+              onChange={(e) => set('isNew', e.target.checked)}
+              className="w-5 h-5 rounded accent-[#1F5742] cursor-pointer"
+            />
+            {t.fNewArrival}
           </label>
         </div>
       </Section>

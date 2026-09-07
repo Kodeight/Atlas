@@ -414,6 +414,11 @@ const productSchema = z.object({
   sizes: z.array(sizeInputSchema).max(30).optional(),
   images: z.array(imageInputSchema).max(30).optional(),
   categoryId: z.string().nullable().optional(),
+  compareAtPrice: z.number().positive().nullable().optional(),
+  isNew: z.boolean().optional(),
+}).refine((d) => d.compareAtPrice == null || d.compareAtPrice > d.price, {
+  message: "Compare-at price must be higher than the sale price.",
+  path: ["compareAtPrice"],
 });
 
 const orderSchema = z.object({

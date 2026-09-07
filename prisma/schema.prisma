@@ -39,9 +39,11 @@ model Product {
   flavorFr       String?
   description    String
   descriptionFr  String?
-  price          Float
-  image          String
-  stock          Int
+  price         Float
+  compareAtPrice Float?
+  isNew         Boolean @default(false)
+  image         String
+  stock         Int
   color          String?
   bgGradient     String?
   galleryEnabled Boolean        @default(false)
